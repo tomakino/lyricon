@@ -19,6 +19,9 @@ import androidx.core.view.isVisible
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.android.extensions.dp
 import io.github.proify.android.extensions.setColorAlpha
+import io.github.proify.android.extensions.toBitmap
+import io.github.proify.lyricon.common.util.CoverThemeColorExtractor
+import io.github.proify.lyricon.common.util.CoverThemeGradientExtractor
 import io.github.proify.lyricon.common.util.ResourceMapper
 import io.github.proify.lyricon.common.util.ScreenStateMonitor
 import io.github.proify.lyricon.lyric.style.BasicStyle
@@ -27,6 +30,7 @@ import io.github.proify.lyricon.statusbarlyric.StatusBarLyric
 import io.github.proify.lyricon.xposed.systemui.util.ClockColorMonitor
 import io.github.proify.lyricon.xposed.systemui.util.OnColorChangeListener
 import io.github.proify.lyricon.xposed.systemui.util.ViewVisibilityController
+import java.io.File
 
 /**
  * 状态栏歌词视图控制器：负责歌词视图的注入、位置锚定及显隐逻辑
@@ -48,6 +52,9 @@ class StatusBarViewController(
     private var lastHighlightView: View? = null
 
     private var colorMonitorView: View? = null
+    private var coverThemeColors: CoverThemeColorExtractor.ThemeColors? = null
+    private var coverThemeGradientColors: CoverThemeGradientExtractor.ThemeGradientColors? = null
+    private var lastClockColor: Int? = null
 
     // --- 生命周期与初始化 ---
     fun onCreate() {
@@ -60,10 +67,15 @@ class StatusBarViewController(
         val onColorChangeListener = object : OnColorChangeListener {
             override fun onColorChanged(color: Int, darkIntensity: Float) {
                 lyricView.apply {
+                    lastClockColor = color
+                    currentStatusColor.darkIntensity = darkIntensity
+                    if (shouldUseCoverTextColor() && applyCoverStatusColor()) return
                     setStatusBarColor(currentStatusColor.apply {
                         this.color = color
                         this.darkIntensity = darkIntensity
-                        translucentColor = color.setColorAlpha(0.5f)
+                        translucentColor = color.setColorAlpha(0.75f)
+                        gradientColors = null
+                        translucentGradientColors = null
                     })
                 }
             }
@@ -108,6 +120,79 @@ class StatusBarViewController(
             //YLog.info("Lyric location unchanged: $lastAnchor")
         }
         lyricView.updateStyle(lyricStyle)
+        if (shouldUseCoverTextColor()) {
+            updateCoverThemeColors(lyricView.logoView.coverFile)
+        } else {
+            coverThemeColors = null
+            coverThemeGradientColors = null
+            lastClockColor?.let { color ->
+                lyricView.setStatusBarColor(lyricView.currentStatusColor.apply {
+                    this.color = color
+                    translucentColor = color.setColorAlpha(0.75f)
+                    gradientColors = null
+                    translucentGradientColors = null
+                })
+            }
+        }
+    }
+
+    fun updateCoverThemeColors(coverFile: File?) {
+        if (!shouldUseCoverTextColor()) {
+            coverThemeColors = null
+            coverThemeGradientColors = null
+            return
+        }
+
+        val bitmap = coverFile?.toBitmap(64, 64) ?: return
+        try {
+            coverThemeColors = CoverThemeColorExtractor.extract(bitmap)
+            coverThemeGradientColors = if (shouldUseCoverTextGradient()) {
+                CoverThemeGradientExtractor.extract(bitmap)
+            } else {
+                null
+            }
+        } finally {
+            bitmap.recycle()
+        }
+        applyCoverStatusColor()
+    }
+
+    private fun shouldUseCoverTextColor(): Boolean {
+        val textStyle = currentLyricStyle.packageStyle.text
+        return textStyle.enableExtractCoverTextColor && !textStyle.enableCustomTextColor
+    }
+
+    private fun shouldUseCoverTextGradient(): Boolean {
+        val textStyle = currentLyricStyle.packageStyle.text
+        return shouldUseCoverTextColor() && textStyle.enableExtractCoverTextGradient
+    }
+
+    private fun applyCoverStatusColor(): Boolean {
+        val colors = coverThemeColors ?: return false
+        val statusColor = lyricView.currentStatusColor
+        val isLightMode = statusColor.lightMode
+
+        val gradient = coverThemeGradientColors
+            ?.takeIf { shouldUseCoverTextGradient() }
+            ?.let { if (isLightMode) it.lightModeColors else it.darkModeColors }
+            ?.takeIf { it.isNotEmpty() }
+
+        val color = if (isLightMode) colors.lightModeColor else colors.darkModeColor
+
+        lyricView.setStatusBarColor(statusColor.apply {
+            if (gradient != null && gradient.size >= 2) {
+                this.color = gradient.first()
+                translucentColor = this.color.setColorAlpha(0.75f)
+                gradientColors = gradient
+                translucentGradientColors = gradient.map { it.setColorAlpha(0.75f) }.toIntArray()
+            } else {
+                this.color = color
+                translucentColor = color.setColorAlpha(0.75f)
+                gradientColors = null
+                translucentGradientColors = null
+            }
+        })
+        return true
     }
 
     /**

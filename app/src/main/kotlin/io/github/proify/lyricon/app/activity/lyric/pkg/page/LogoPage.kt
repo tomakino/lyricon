@@ -32,6 +32,7 @@ import io.github.proify.lyricon.app.compose.custom.miuix.extra.SuperCheckbox
 import io.github.proify.lyricon.app.compose.preference.InputPreference
 import io.github.proify.lyricon.app.compose.preference.InputType
 import io.github.proify.lyricon.app.compose.preference.LogoColorPreference
+import io.github.proify.lyricon.app.compose.preference.rememberBooleanPreference
 import io.github.proify.lyricon.app.compose.preference.RectInputPreference
 import io.github.proify.lyricon.app.compose.preference.SwitchPreference
 import io.github.proify.lyricon.app.compose.preference.rememberIntPreference
@@ -203,6 +204,11 @@ fun LogoPage(
                     .padding(horizontal = 16.dp)
                     .fillMaxWidth()
             ) {
+                val customColorEnabled = rememberBooleanPreference(
+                    sharedPreferences = sharedPreferences,
+                    key = "lyric_style_logo_enable_custom_color",
+                    defaultValue = LogoStyle.Defaults.ENABLE_CUSTOM_COLOR
+                )
                 SwitchPreference(
                     sharedPreferences,
                     "lyric_style_logo_enable_custom_color",
@@ -217,6 +223,7 @@ fun LogoPage(
                     "lyric_style_logo_color_light_mode",
                     defaultColor = Color.Black,
                     title = stringResource(R.string.item_logo_color_light),
+                    enabled = customColorEnabled.value,
                     leftAction = {
                         IconActions(painterResource(R.drawable.ic_brightness7))
                     },
@@ -227,6 +234,7 @@ fun LogoPage(
                     "lyric_style_logo_color_dark_mode",
                     defaultColor = Color.White,
                     title = stringResource(R.string.item_logo_color_dark),
+                    enabled = customColorEnabled.value,
                     leftAction = {
                         IconActions(painterResource(R.drawable.ic_darkmode))
                     },

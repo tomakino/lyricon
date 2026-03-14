@@ -44,6 +44,7 @@ fun LogoColorPreference(
     title: String,
     defaultColor: Color,
     leftAction: @Composable (() -> Unit)? = null,
+    enabled: Boolean = true,
 ) {
     val logoColor = rememberLogoColor(sharedPreferences, key)
     var currentColor by remember(logoColor) { mutableIntStateOf(logoColor.color) }
@@ -97,7 +98,12 @@ fun LogoColorPreference(
                 Spacer(modifier = Modifier.width(10.dp))
             }
         },
-        onClick = { isDialogVisible.value = true }
+        enabled = enabled,
+        onClick = {
+            if (enabled) {
+                isDialogVisible.value = true
+            }
+        },
     )
 }
 

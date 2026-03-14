@@ -196,7 +196,9 @@ class SuperText(context: Context) : LyricPlayerView(context) {
         return if (textStyle.enableCustomTextColor && customColor?.normal?.isNotEmpty() == true) {
             customColor.normal
         } else {
-            intArrayOf(currentStatusColor.color)
+            currentStatusColor.gradientColors?.takeIf { it.isNotEmpty() } ?: intArrayOf(
+                currentStatusColor.color
+            )
         }
     }
 
@@ -205,7 +207,9 @@ class SuperText(context: Context) : LyricPlayerView(context) {
         return if (textStyle.enableCustomTextColor && customColor?.background?.isNotEmpty() == true) {
             customColor.background
         } else {
-            intArrayOf(currentStatusColor.translucentColor)
+            currentStatusColor.translucentGradientColors?.takeIf { it.isNotEmpty() } ?: intArrayOf(
+                currentStatusColor.translucentColor
+            )
         }
     }
 
@@ -214,7 +218,9 @@ class SuperText(context: Context) : LyricPlayerView(context) {
         return if (textStyle.enableCustomTextColor && customColor?.highlight?.isNotEmpty() == true) {
             customColor.highlight
         } else {
-            intArrayOf(currentStatusColor.color)
+            currentStatusColor.gradientColors?.takeIf { it.isNotEmpty() } ?: intArrayOf(
+                currentStatusColor.color
+            )
         }
     }
 
