@@ -72,6 +72,8 @@
     <string name="item_text_margins">Margins</string>
     <string name="item_text_paddings">Padding</string>
     <string name="item_text_color">Color</string>
+    <string name="item_text_extract_cover_color">Extract cover color</string>
+    <string name="item_text_extract_cover_gradient">Extract cover gradient</string>
     <string name="item_text_enable_custom_color">Custom color</string>
     <string name="item_text_color_light_mode">Color (light mode)</string>
     <string name="item_text_color_dark_mode">Color (dark mode)</string>

@@ -533,7 +533,6 @@ object AutoTranslationManager {
     private fun buildUserPrompt(targetLanguage: String, texts: List<String>): String {
         val payload = json.encodeToString(texts)
         return buildString {
-            appendLine("Target language: $targetLanguage")
             appendLine("Translate each line individually.")
             appendLine("Output must be a JSON array with the same number of elements.")
             appendLine("Each output item corresponds to the same index in the input.")

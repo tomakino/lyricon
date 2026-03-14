@@ -52,6 +52,12 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
     var providerInfo: ProviderInfo? = null
         private set
 
+    @Volatile
+    private var isDisplayTranslation: Boolean = true
+
+    @Volatile
+    private var lastSong: Song? = null
+
     private val uiHandler by lazy { Handler(Looper.getMainLooper(), this) }
 
     private var lastPostTime = 0L
@@ -124,6 +130,7 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
     override fun onDisplayTranslationChanged(isDisplayTranslation: Boolean) {
         if (DEBUG) YLog.debug(tag = TAG, msg = "onDisplayTranslationChanged: $isDisplayTranslation")
 
+        this.isDisplayTranslation = isDisplayTranslation
         uiHandler.obtainMessage(MSG_TRANSLATION_TOGGLE, if (isDisplayTranslation) 1 else 0, 0)
             .sendToTarget()
     }
@@ -138,8 +145,22 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
     // --- 集中式 UI 处理逻辑 ---
     override fun handleMessage(msg: Message): Boolean {
         when (msg.what) {
-            MSG_PROVIDER_CHANGED -> songVersion++
-            MSG_SONG_CHANGED -> dispatchAutoTranslation(msg.obj as? Song)
+            // provider改变时，重置歌曲版本号和当前歌曲
+            MSG_PROVIDER_CHANGED -> {
+                songVersion++
+                lastSong = null
+            }
+            // 歌曲改变时，更新当前歌曲并触发自动翻译
+            MSG_SONG_CHANGED -> {
+                lastSong = msg.obj as? Song
+                dispatchAutoTranslation(lastSong)
+            }
+            // 翻译切换时，根据状态触发自动翻译
+            MSG_TRANSLATION_TOGGLE -> {
+                if (msg.arg1 == 1) {
+                    dispatchAutoTranslation(lastSong)
+                }
+            }
         }
 
         var ok = true
@@ -167,7 +188,9 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
                     view.logoView.apply {
                         val activePackage = this@LyricViewController.activePackage
                         this.activePackage = activePackage
-                        coverFile = NotificationCoverHelper.getCoverFile(activePackage)
+                        val cover = NotificationCoverHelper.getCoverFile(activePackage)
+                        coverFile = cover
+                        controller.updateCoverThemeColors(cover)
                         post { providerLogo = provider?.logo }
                     }
                 }
@@ -213,12 +236,16 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
     }
 
     override fun onCoverUpdated(packageName: String, coverFile: File) {
-        forViewEach {
-            logoView.apply {
+        forControllerEach {
+            val view = lyricView
+            view.logoView.apply {
                 if (packageName == activePackage && strategy is SuperLogo.CoverStrategy) {
                     this.coverFile = coverFile
                     strategy?.updateContent()
                 }
+            }
+            if (packageName == activePackage) {
+                updateCoverThemeColors(coverFile)
             }
         }
     }
@@ -242,6 +269,8 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
     }
 
     private fun dispatchAutoTranslation(song: Song?) {
+        if (!isDisplayTranslation) return
+
         val settings = LyricPrefs.getActiveTranslationSettings()
         if (!settings.isUsable || song == null) return
 

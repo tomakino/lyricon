@@ -72,6 +72,8 @@
     <string name="item_text_margins">边距</string>
     <string name="item_text_paddings">内边距</string>
     <string name="item_text_color">颜色</string>
+    <string name="item_text_extract_cover_color">提取封面颜色</string>
+    <string name="item_text_extract_cover_gradient">提取封面渐变色</string>
     <string name="item_text_enable_custom_color">自定义颜色</string>
     <string name="item_text_color_light_mode">亮场景下颜色</string>
     <string name="item_text_color_dark_mode">暗场景下颜色</string>

@@ -25,6 +25,8 @@ data class TextStyle(
     var fadingEdgeLength: Int = Defaults.FADING_EDGE_LENGTH,
 
     var enableCustomTextColor: Boolean = Defaults.ENABLE_CUSTOM_TEXT_COLOR,
+    var enableExtractCoverTextColor: Boolean = Defaults.ENABLE_EXTRACT_COVER_TEXT_COLOR,
+    var enableExtractCoverTextGradient: Boolean = Defaults.ENABLE_EXTRACT_COVER_TEXT_GRADIENT,
     var lightModeRainbowColor: RainbowTextColor? = Defaults.LIGHT_MODE_RAINBOW_COLOR,
     var darkModeRainbowColor: RainbowTextColor? = Defaults.DARK_MODE_RAINBOW_COLOR,
 
@@ -79,6 +81,8 @@ data class TextStyle(
         const val FADING_EDGE_LENGTH: Int = 14
 
         const val ENABLE_CUSTOM_TEXT_COLOR: Boolean = false
+        const val ENABLE_EXTRACT_COVER_TEXT_COLOR: Boolean = false
+        const val ENABLE_EXTRACT_COVER_TEXT_GRADIENT: Boolean = false
 
         val LIGHT_MODE_RAINBOW_COLOR: RainbowTextColor? = null
         val DARK_MODE_RAINBOW_COLOR: RainbowTextColor? = null
@@ -113,6 +117,21 @@ data class TextStyle(
             "lyric_style_text_enable_custom_color",
             Defaults.ENABLE_CUSTOM_TEXT_COLOR
         )
+        enableExtractCoverTextColor = preferences.getBoolean(
+            "lyric_style_text_extract_cover_color",
+            Defaults.ENABLE_EXTRACT_COVER_TEXT_COLOR
+        )
+        enableExtractCoverTextGradient = preferences.getBoolean(
+            "lyric_style_text_extract_cover_gradient",
+            Defaults.ENABLE_EXTRACT_COVER_TEXT_GRADIENT
+        )
+        if (enableCustomTextColor) {
+            enableExtractCoverTextColor = false
+            enableExtractCoverTextGradient = false
+        }
+        if (!enableExtractCoverTextColor) {
+            enableExtractCoverTextGradient = false
+        }
         lightModeRainbowColor = json.safeDecode<RainbowTextColor>(
             preferences.getString("lyric_style_text_rainbow_color_light_mode", null),
             Defaults.LIGHT_MODE_RAINBOW_COLOR
@@ -190,6 +209,11 @@ data class TextStyle(
         editor.putString("lyric_style_text_paddings", paddings.toJson())
 
         editor.putBoolean("lyric_style_text_enable_custom_color", enableCustomTextColor)
+        editor.putBoolean("lyric_style_text_extract_cover_color", enableExtractCoverTextColor)
+        editor.putBoolean(
+            "lyric_style_text_extract_cover_gradient",
+            enableExtractCoverTextGradient
+        )
         editor.putString(
             "lyric_style_text_rainbow_color_light_mode",
             lightModeRainbowColor.toJson()
