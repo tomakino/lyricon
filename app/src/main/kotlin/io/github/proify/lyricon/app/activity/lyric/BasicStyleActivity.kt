@@ -196,6 +196,16 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
                         enabled = dynamicWidthEnabled.value
                     )
 
+                    SwitchPreference(
+                        sharedPreferences = preferences,
+                        key = "lyric_style_base_xiaomi_island_temp_hide_enabled",
+                        defaultValue = BasicStyle.Defaults.XIAOMI_ISLAND_TEMP_HIDE_ENABLED,
+                        title = stringResource(R.string.item_base_xiaomi_island_temp_hide),
+                        summary = stringResource(R.string.item_base_xiaomi_island_temp_hide_summary),
+                        startAction = {
+                            IconActions(painterResource(R.drawable.ic_visibility_off))
+                        },
+                    )
                     if (Utils.isOPlus) {
                         InputPreference(
                             sharedPreferences = preferences,

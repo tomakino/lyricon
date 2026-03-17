@@ -102,6 +102,7 @@ class StatusBarViewController(
         ScreenStateMonitor.removeListener(this)
         colorMonitorView?.let { ClockColorMonitor.setListener(it, null) }
         restoreClockVisibilityFromDynamicWidth()
+        LyricViewController.notifyLyricVisibilityChanged()
         YLog.info("Lyric view destroyed for $statusBarView")
     }
 
@@ -140,6 +141,7 @@ class StatusBarViewController(
             }
         }
         updateDynamicWidthClockVisibility()
+        LyricViewController.notifyLyricVisibilityChanged()
     }
 
     fun updateCoverThemeColors(coverFile: File?) {
@@ -326,6 +328,7 @@ class StatusBarViewController(
             isPlaying = computeShouldApplyPlayingRules()
         )
         updateDynamicWidthClockVisibility()
+        LyricViewController.notifyLyricVisibilityChanged()
     }
 
     private fun createLyricView(style: LyricStyle) =
@@ -378,23 +381,27 @@ class StatusBarViewController(
         lyricView.updateVisibility()
         lyricView.isSleepMode = false
         updateDynamicWidthClockVisibility()
+        LyricViewController.notifyLyricVisibilityChanged()
     }
 
     override fun onScreenOff() {
         lyricView.updateVisibility()
         lyricView.isSleepMode = true
         updateDynamicWidthClockVisibility()
+        LyricViewController.notifyLyricVisibilityChanged()
     }
 
     override fun onScreenUnlocked() {
         lyricView.updateVisibility()
         lyricView.isSleepMode = false
         updateDynamicWidthClockVisibility()
+        LyricViewController.notifyLyricVisibilityChanged()
     }
 
     fun onDisableStateChanged(shouldHide: Boolean) {
         lyricView.isDisabledVisible = shouldHide
         updateDynamicWidthClockVisibility()
+        LyricViewController.notifyLyricVisibilityChanged()
     }
 
     override fun equals(other: Any?): Boolean =

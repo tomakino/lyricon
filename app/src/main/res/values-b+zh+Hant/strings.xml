@@ -134,6 +134,8 @@
     <string name="item_base_dynamic_width_auto_hide_clock_disabled_summary">請先啟用「歌詞寬度跟隨歌詞長度」。</string>
     <string name="item_base_dynamic_width_auto_hide_clock_summary">僅在錨點為 clock 且你未手動設定「clock 播放時隱藏」時生效。</string>
     <string name="item_base_dynamic_width_summary">預設關閉。啟用後歌詞區域會依歌詞內容動態變化寬度。</string>
+    <string name="item_base_xiaomi_island_temp_hide">隱藏超級島</string>
+    <string name="item_base_xiaomi_island_temp_hide_summary">僅在歌詞顯示時隱藏，歌詞消失後自動恢復。</string>
     <string name="item_base_width_color_os_capsule">寬度（流體膠囊模式下）</string>
     <string name="item_base_margins">邊距</string>
     <string name="item_base_paddings">內距</string>

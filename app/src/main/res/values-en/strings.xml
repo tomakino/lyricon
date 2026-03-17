@@ -134,6 +134,8 @@
     <string name="item_base_dynamic_width_auto_hide_clock_disabled_summary">Enable \"Lyric width follows lyric length\" first.</string>
     <string name="item_base_dynamic_width_auto_hide_clock_summary">Only works when anchor is clock and you did not manually set \"hide clock while playing\".</string>
     <string name="item_base_dynamic_width_summary">Disabled by default. When enabled, lyric area width adapts to current lyric content.</string>
+    <string name="item_base_xiaomi_island_temp_hide">Hide Super Island</string>
+    <string name="item_base_xiaomi_island_temp_hide_summary">Hide only while lyrics are visible and restore automatically afterward.</string>
     <string name="item_base_width_color_os_capsule">Width (Capsule mode)</string>
     <string name="item_base_margins">Margins</string>
     <string name="item_base_paddings">Padding</string>

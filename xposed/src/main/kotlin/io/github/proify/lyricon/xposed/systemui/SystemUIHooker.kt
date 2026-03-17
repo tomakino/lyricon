@@ -32,6 +32,7 @@ import io.github.proify.lyricon.xposed.systemui.util.OplusCapsuleHooker
 import io.github.proify.lyricon.xposed.systemui.util.StatusBarDisableHooker
 import io.github.proify.lyricon.xposed.systemui.util.StatusBarDisableHooker.OnStatusBarDisableListener
 import io.github.proify.lyricon.xposed.systemui.util.ViewVisibilityTracker
+import io.github.proify.lyricon.xposed.systemui.util.XiaomiIslandHooker
 
 object SystemUIHooker : YukiBaseHooker() {
     private const val TEST_CRASH = false
@@ -94,6 +95,7 @@ object SystemUIHooker : YukiBaseHooker() {
 
         ScreenStateMonitor.initialize(context)
         OplusCapsuleHooker.initialize(context.classLoader)
+        XiaomiIslandHooker.initialize(context.classLoader)
         BridgeCentral.initialize(context)
         NotificationCoverHelper.initialize(context.classLoader)
         ViewVisibilityTracker.initialize(context.classLoader)
@@ -121,6 +123,7 @@ object SystemUIHooker : YukiBaseHooker() {
         val channel = dataChannel
         channel.wait(key = AppBridgeConstants.REQUEST_UPDATE_LYRIC_STYLE) {
             StatusBarViewManager.forEach { it.updateLyricStyle(LyricPrefs.getLyricStyle()) }
+            LyricViewController.notifyLyricVisibilityChanged()
         }
         channel.wait<String>(key = AppBridgeConstants.REQUEST_HIGHLIGHT_VIEW) { id ->
             StatusBarViewManager.forEach { it.highlightView(id) }

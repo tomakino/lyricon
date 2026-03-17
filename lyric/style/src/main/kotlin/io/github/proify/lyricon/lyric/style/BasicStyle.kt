@@ -25,6 +25,7 @@ data class BasicStyle(
     var widthInColorOSCapsuleMode: Float = Defaults.WIDTH_IN_COLOROS_CAPSULE_MODE,
     var dynamicWidthEnabled: Boolean = Defaults.DYNAMIC_WIDTH_ENABLED,
     var dynamicWidthAutoHideClock: Boolean = Defaults.DYNAMIC_WIDTH_AUTO_HIDE_CLOCK,
+    var xiaomiIslandTempHideEnabled: Boolean = Defaults.XIAOMI_ISLAND_TEMP_HIDE_ENABLED,
     var margins: RectF = Defaults.MARGINS,
     var paddings: RectF = Defaults.PADDINGS,
     var visibilityRules: List<VisibilityRule> = Defaults.VISIBILITY_RULES,
@@ -69,6 +70,10 @@ data class BasicStyle(
         dynamicWidthAutoHideClock = preferences.getBoolean(
             "lyric_style_base_dynamic_width_auto_hide_clock",
             Defaults.DYNAMIC_WIDTH_AUTO_HIDE_CLOCK
+        )
+        xiaomiIslandTempHideEnabled = preferences.getBoolean(
+            "lyric_style_base_xiaomi_island_temp_hide_enabled",
+            Defaults.XIAOMI_ISLAND_TEMP_HIDE_ENABLED
         )
 
         margins = json.safeDecode<RectF>(
@@ -117,6 +122,10 @@ data class BasicStyle(
         editor.putFloat("lyric_style_base_width_in_coloros_capsule_mode", widthInColorOSCapsuleMode)
         editor.putBoolean("lyric_style_base_dynamic_width_enabled", dynamicWidthEnabled)
         editor.putBoolean("lyric_style_base_dynamic_width_auto_hide_clock", dynamicWidthAutoHideClock)
+        editor.putBoolean(
+            "lyric_style_base_xiaomi_island_temp_hide_enabled",
+            xiaomiIslandTempHideEnabled
+        )
         editor.putString("lyric_style_base_margins", margins.toJson())
         editor.putString("lyric_style_base_paddings", paddings.toJson())
         editor.putString("lyric_style_base_visibility_rules", visibilityRules.toJson())
@@ -145,6 +154,7 @@ data class BasicStyle(
         const val WIDTH_IN_COLOROS_CAPSULE_MODE: Float = 70f
         const val DYNAMIC_WIDTH_ENABLED: Boolean = false
         const val DYNAMIC_WIDTH_AUTO_HIDE_CLOCK: Boolean = false
+        const val XIAOMI_ISLAND_TEMP_HIDE_ENABLED: Boolean = true
         val MARGINS: RectF = RectF()
         val PADDINGS: RectF = RectF()
         val VISIBILITY_RULES: List<VisibilityRule> = emptyList()

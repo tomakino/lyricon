@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Message
 import android.os.SystemClock
+import androidx.core.view.isVisible
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.lyricon.central.provider.player.ActivePlayerListener
 import io.github.proify.lyricon.lyric.model.Song
@@ -19,6 +20,7 @@ import io.github.proify.lyricon.statusbarlyric.SuperLogo
 import io.github.proify.lyricon.xposed.systemui.util.LyricPrefs
 import io.github.proify.lyricon.xposed.systemui.util.NotificationCoverHelper
 import io.github.proify.lyricon.xposed.systemui.util.OplusCapsuleHooker
+import io.github.proify.lyricon.xposed.systemui.util.XiaomiIslandHooker
 import java.io.File
 
 object LyricViewController : ActivePlayerListener, Handler.Callback,
@@ -167,6 +169,7 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
         forControllerEach {
             ok = handleMessageInternal(msg, this)
         }
+        syncVendorTemporaryUi()
         return ok
     }
 
@@ -233,6 +236,7 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
         forViewEach {
             setOplusCapsuleVisibility(isShowing)
         }
+        syncVendorTemporaryUi()
     }
 
     override fun onCoverUpdated(packageName: String, coverFile: File) {
@@ -248,6 +252,11 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
                 updateCoverThemeColors(coverFile)
             }
         }
+        syncVendorTemporaryUi()
+    }
+
+    fun notifyLyricVisibilityChanged() {
+        syncVendorTemporaryUi()
     }
 
     private inline fun forControllerEach(crossinline block: StatusBarViewController.() -> Unit) {
@@ -266,6 +275,17 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
             val view = lyricView
             block(view)
         }
+    }
+
+    private fun syncVendorTemporaryUi() {
+        val enableXiaomiIslandHide = LyricPrefs.baseStyle.xiaomiIslandTempHideEnabled
+        val shouldHideXiaomiIsland = StatusBarViewManager.controllers.any { controller ->
+            val view = controller.lyricView
+            enableXiaomiIslandHide
+                    && view.isAttachedToWindow
+                    && view.isVisible
+        }
+        XiaomiIslandHooker.setHideByLyric(shouldHideXiaomiIsland)
     }
 
     private fun dispatchAutoTranslation(song: Song?) {
