@@ -31,6 +31,7 @@ import io.github.proify.lyricon.app.compose.preference.InputPreference
 import io.github.proify.lyricon.app.compose.preference.InputType
 import io.github.proify.lyricon.app.compose.preference.RectInputPreference
 import io.github.proify.lyricon.app.compose.preference.SwitchPreference
+import io.github.proify.lyricon.app.compose.preference.rememberBooleanPreference
 import io.github.proify.lyricon.app.compose.preference.rememberStringPreference
 import io.github.proify.lyricon.app.util.LyricPrefs
 import io.github.proify.lyricon.app.util.Utils
@@ -160,6 +161,53 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
                         },
                     )
 
+                    val dynamicWidthEnabled = rememberBooleanPreference(
+                        preferences,
+                        "lyric_style_base_dynamic_width_enabled",
+                        BasicStyle.Defaults.DYNAMIC_WIDTH_ENABLED
+                    )
+
+                    SwitchPreference(
+                        sharedPreferences = preferences,
+                        key = "lyric_style_base_dynamic_width_enabled",
+                        defaultValue = BasicStyle.Defaults.DYNAMIC_WIDTH_ENABLED,
+                        title = stringResource(R.string.item_base_dynamic_width),
+                        summary = stringResource(R.string.item_base_dynamic_width_summary),
+                        startAction = {
+                            IconActions(painterResource(R.drawable.ic_visibility_off))
+                        },
+                    )
+
+                    SwitchPreference(
+                        sharedPreferences = preferences,
+                        key = "lyric_style_base_dynamic_width_auto_hide_clock",
+                        defaultValue = BasicStyle.Defaults.DYNAMIC_WIDTH_AUTO_HIDE_CLOCK,
+                        title = stringResource(R.string.item_base_dynamic_width_auto_hide_clock),
+                        summary = stringResource(
+                            if (dynamicWidthEnabled.value) {
+                                R.string.item_base_dynamic_width_auto_hide_clock_summary
+                            } else {
+                                R.string.item_base_dynamic_width_auto_hide_clock_disabled_summary
+                            }
+                        ),
+                        startAction = {
+                            IconActions(painterResource(R.drawable.ic_width_normal))
+                        },
+                        enabled = dynamicWidthEnabled.value
+                    )
+
+                    if (Utils.isHyperOs3OrAbove) {
+                        SwitchPreference(
+                            sharedPreferences = preferences,
+                            key = "lyric_style_base_xiaomi_island_temp_hide_enabled",
+                            defaultValue = BasicStyle.Defaults.XIAOMI_ISLAND_TEMP_HIDE_ENABLED,
+                            title = stringResource(R.string.item_base_xiaomi_island_temp_hide),
+                            summary = stringResource(R.string.item_base_xiaomi_island_temp_hide_summary),
+                            startAction = {
+                                IconActions(painterResource(R.drawable.ic_visibility_off))
+                            },
+                        )
+                    }
                     if (Utils.isOPlus) {
                         InputPreference(
                             sharedPreferences = preferences,
@@ -202,6 +250,16 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
                             IconActions(painterResource(R.drawable.ic_visibility_off))
                         },
                         title = stringResource(R.string.item_base_lockscreen_hidden),
+                    )
+
+                    SwitchPreference(
+                        preferences,
+                        "lyric_style_base_double_tap_switch_clock",
+                        defaultValue = BasicStyle.Defaults.DOUBLE_TAP_SWITCH_CLOCK,
+                        startAction = {
+                            IconActions(painterResource(R.drawable.ic_visibility_off))
+                        },
+                        title = stringResource(R.string.item_base_double_tap_switch_clock),
                     )
 
                     HideWhenNoLyric()

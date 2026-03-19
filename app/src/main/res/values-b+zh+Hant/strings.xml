@@ -74,6 +74,7 @@
     <string name="item_text_color">顏色</string>
     <string name="item_text_extract_cover_color">提取封面顏色</string>
     <string name="item_text_extract_cover_gradient">提取封面漸變色</string>
+    <string name="item_text_enable_rainbow_color">啟用歌詞彩虹漸變</string>
     <string name="item_text_enable_custom_color">自訂顏色</string>
     <string name="item_text_color_light_mode">亮色模式顏色</string>
     <string name="item_text_color_dark_mode">暗色模式顏色</string>
@@ -95,6 +96,10 @@
     <string name="item_text_relative_progress">啟用相對進度歌詞</string>
     <string name="item_text_relative_progress_summary">當歌詞缺少單詞資料時，將整行視為單詞顯示。</string>
     <string name="item_text_relative_progress_highlight">顯示相對進度歌詞高亮進度</string>
+    <string name="item_text_sustain_lift">長音上浮效果</string>
+    <string name="item_text_sustain_glow">長音發光效果</string>
+    <string name="item_text_sustain_glow_color_mode_summary">已啟用取色模式，發光效果不生效。</string>
+    <string name="item_text_sustain_glow_color_mode_hint">開啟取色模式（封面取色/封面漸變/彩虹色/自訂顏色）時不生效。</string>
     <string name="item_text_color_normal">正常顏色</string>
     <string name="item_text_color_background">背景顏色</string>
     <string name="item_text_color_highlight">高亮顏色</string>
@@ -129,6 +134,13 @@
     <string name="item_base_insertion_before">之前</string>
     <string name="item_base_insertion_after">之後</string>
     <string name="item_base_width">寬度</string>
+    <string name="item_base_dynamic_width">歌詞寬度跟隨歌詞長度</string>
+    <string name="item_base_dynamic_width_auto_hide_clock">歌詞過長時自動隱藏 clock</string>
+    <string name="item_base_dynamic_width_auto_hide_clock_disabled_summary">請先啟用「歌詞寬度跟隨歌詞長度」。</string>
+    <string name="item_base_dynamic_width_auto_hide_clock_summary">僅在錨點為 clock 且你未手動設定「clock 播放時隱藏」時生效。</string>
+    <string name="item_base_dynamic_width_summary">預設關閉。啟用後歌詞區域會依歌詞內容動態變化寬度。</string>
+    <string name="item_base_xiaomi_island_temp_hide">隱藏超級島</string>
+    <string name="item_base_xiaomi_island_temp_hide_summary">僅在歌詞顯示時隱藏，歌詞消失後自動恢復。</string>
     <string name="item_base_width_color_os_capsule">寬度（流體膠囊模式下）</string>
     <string name="item_base_margins">邊距</string>
     <string name="item_base_paddings">內距</string>
@@ -142,6 +154,7 @@
     <string name="module_tag_translation">翻譯</string>
     <string name="no_provider_available">沒有可用的歌詞提供者</string>
     <string name="item_base_lockscreen_hidden">在鎖定畫面隱藏</string>
+    <string name="item_base_double_tap_switch_clock">雙擊切換時鐘/歌詞</string>
     <string name="option_provider_list_full">完整</string>
     <string name="option_provider_list_short">精簡</string>
     <string name="no_query_app_permission">請授予讀取應用權限</string>
@@ -165,6 +178,8 @@
     <string name="item_translation_api_key">API Key</string>
     <string name="item_translation_model">模型</string>
     <string name="item_translation_base_url">介面地址</string>
+    <string name="item_translation_display_only">僅顯示翻譯</string>
+    <string name="item_translation_hide_in_lyric">不顯示翻譯</string>
     <string name="item_translation_openai_api_key">OpenAI API Key</string>
     <string name="item_translation_openai_model">OpenAI 模型</string>
     <string name="item_translation_openai_base_url">OpenAI 介面地址</string>

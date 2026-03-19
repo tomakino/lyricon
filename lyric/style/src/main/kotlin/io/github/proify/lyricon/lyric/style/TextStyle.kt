@@ -27,6 +27,7 @@ data class TextStyle(
     var enableCustomTextColor: Boolean = Defaults.ENABLE_CUSTOM_TEXT_COLOR,
     var enableExtractCoverTextColor: Boolean = Defaults.ENABLE_EXTRACT_COVER_TEXT_COLOR,
     var enableExtractCoverTextGradient: Boolean = Defaults.ENABLE_EXTRACT_COVER_TEXT_GRADIENT,
+    var enableRainbowTextColor: Boolean = Defaults.ENABLE_RAINBOW_TEXT_COLOR,
     var lightModeRainbowColor: RainbowTextColor? = Defaults.LIGHT_MODE_RAINBOW_COLOR,
     var darkModeRainbowColor: RainbowTextColor? = Defaults.DARK_MODE_RAINBOW_COLOR,
 
@@ -46,6 +47,8 @@ data class TextStyle(
 
     var relativeProgress: Boolean = Defaults.RELATIVE_PROGRESS,
     var relativeProgressHighlight: Boolean = Defaults.RELATIVE_PROGRESS_HIGHLIGHT,
+    var sustainLiftEnabled: Boolean = Defaults.SUSTAIN_LIFT_ENABLED,
+    var sustainGlowEnabled: Boolean = Defaults.SUSTAIN_GLOW_ENABLED,
     var scaleInMultiLine: Float = Defaults.TEXT_SIZE_RATIO_IN_MULTI_LINE,
 
     var transitionConfig: String? = Defaults.TRANSITION_CONFIG,
@@ -72,6 +75,8 @@ data class TextStyle(
         const val TEXT_SIZE_RATIO_IN_MULTI_LINE: Float = 0.86f
         const val RELATIVE_PROGRESS: Boolean = true
         const val RELATIVE_PROGRESS_HIGHLIGHT: Boolean = false
+        const val SUSTAIN_LIFT_ENABLED: Boolean = true
+        const val SUSTAIN_GLOW_ENABLED: Boolean = true
 
         const val TEXT_SIZE: Float = 0f
         val MARGINS: RectF = RectF()
@@ -83,6 +88,7 @@ data class TextStyle(
         const val ENABLE_CUSTOM_TEXT_COLOR: Boolean = false
         const val ENABLE_EXTRACT_COVER_TEXT_COLOR: Boolean = false
         const val ENABLE_EXTRACT_COVER_TEXT_GRADIENT: Boolean = false
+        const val ENABLE_RAINBOW_TEXT_COLOR: Boolean = false
 
         val LIGHT_MODE_RAINBOW_COLOR: RainbowTextColor? = null
         val DARK_MODE_RAINBOW_COLOR: RainbowTextColor? = null
@@ -125,7 +131,17 @@ data class TextStyle(
             "lyric_style_text_extract_cover_gradient",
             Defaults.ENABLE_EXTRACT_COVER_TEXT_GRADIENT
         )
+        enableRainbowTextColor = preferences.getBoolean(
+            "lyric_style_text_enable_rainbow_color",
+            Defaults.ENABLE_RAINBOW_TEXT_COLOR
+        )
         if (enableCustomTextColor) {
+            enableExtractCoverTextColor = false
+            enableExtractCoverTextGradient = false
+            enableRainbowTextColor = false
+        }
+        if (enableRainbowTextColor) {
+            enableCustomTextColor = false
             enableExtractCoverTextColor = false
             enableExtractCoverTextGradient = false
         }
@@ -186,6 +202,14 @@ data class TextStyle(
             "lyric_style_text_relative_progress_highlight",
             Defaults.RELATIVE_PROGRESS_HIGHLIGHT
         )
+        sustainLiftEnabled = preferences.getBoolean(
+            "lyric_style_text_sustain_lift",
+            Defaults.SUSTAIN_LIFT_ENABLED
+        )
+        sustainGlowEnabled = preferences.getBoolean(
+            "lyric_style_text_sustain_glow",
+            Defaults.SUSTAIN_GLOW_ENABLED
+        )
         scaleInMultiLine = preferences.getFloat(
             "lyric_style_text_size_ratio_in_multi_line_mode",
             Defaults.TEXT_SIZE_RATIO_IN_MULTI_LINE
@@ -214,6 +238,7 @@ data class TextStyle(
             "lyric_style_text_extract_cover_gradient",
             enableExtractCoverTextGradient
         )
+        editor.putBoolean("lyric_style_text_enable_rainbow_color", enableRainbowTextColor)
         editor.putString(
             "lyric_style_text_rainbow_color_light_mode",
             lightModeRainbowColor.toJson()
@@ -242,6 +267,8 @@ data class TextStyle(
             "lyric_style_text_relative_progress_highlight",
             relativeProgressHighlight
         )
+        editor.putBoolean("lyric_style_text_sustain_lift", sustainLiftEnabled)
+        editor.putBoolean("lyric_style_text_sustain_glow", sustainGlowEnabled)
         editor.putFloat(
             "lyric_style_text_size_ratio_in_multi_line_mode",
             scaleInMultiLine

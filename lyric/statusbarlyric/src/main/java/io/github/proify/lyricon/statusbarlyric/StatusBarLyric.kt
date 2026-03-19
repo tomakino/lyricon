@@ -85,6 +85,9 @@ class StatusBarLyric(
     private var currentStyle: LyricStyle = initialStyle
     private var isPlaying: Boolean = false
     private var isOplusCapsuleShowing: Boolean = false
+    private var userHideLyric: Boolean = false
+
+    var onPlayingChanged: ((Boolean) -> Unit)? = null
 
     // 上一次 Logo gravity，用于避免重复重排
     private var lastLogoGravity: Int = -114
@@ -171,7 +174,7 @@ class StatusBarLyric(
 
         addView(
             textView,
-            LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+            LayoutParams(0, LayoutParams.WRAP_CONTENT).apply {
                 weight = 1f
             }
         )
@@ -216,6 +219,7 @@ class StatusBarLyric(
 
         lastPlaying = playing
         isPlaying = playing
+        onPlayingChanged?.invoke(playing)
 
         if (!playing) {
             textView.reset()
@@ -239,12 +243,19 @@ class StatusBarLyric(
                 && !isHideOnLockScreen()
                 && textView.shouldShow()
                 && !lyricTimedOut
+                && !userHideLyric
                 && !isDisabledVisible
 
         visibleIfChanged = shouldShow
 
         Log.d(TAG, "updateVisibility: $shouldShow")
         Log.d(TAG, "textVisibility: ${textView.isVisible}")
+    }
+
+    fun setUserHideLyric(hide: Boolean) {
+        if (userHideLyric == hide) return
+        userHideLyric = hide
+        updateVisibility()
     }
 
     fun setSong(song: Song?) {
@@ -326,12 +337,13 @@ class StatusBarLyric(
         val paddings = basic.paddings
 
         ensureMarginLayoutParams().apply {
-            width = calculateTargetWidth(basic).dp
+            width = calculateContainerWidth(basic)
             leftMargin = margins.left.dp
             topMargin = margins.top.dp
             rightMargin = margins.right.dp
             bottomMargin = margins.bottom.dp
         }
+        updateTextViewWidthMode(basic)
 
         updatePadding(
             paddings.left.dp,
@@ -342,10 +354,31 @@ class StatusBarLyric(
     }
 
     private fun updateWidthInternal(style: LyricStyle) {
-        val width = calculateTargetWidth(style.basicStyle).dp
+        val width = calculateContainerWidth(style.basicStyle)
         ensureMarginLayoutParams().width = width
         requestLayout()
         Log.d(TAG, "updateWidthInternal: $width")
+    }
+
+    private fun calculateContainerWidth(basicStyle: BasicStyle): Int {
+        return if (basicStyle.dynamicWidthEnabled) {
+            LayoutParams.WRAP_CONTENT
+        } else {
+            calculateTargetWidth(basicStyle).dp
+        }
+    }
+
+    private fun updateTextViewWidthMode(basicStyle: BasicStyle) {
+        val lp = (textView.layoutParams as? LayoutParams)
+            ?: LayoutParams(0, LayoutParams.WRAP_CONTENT)
+        if (basicStyle.dynamicWidthEnabled) {
+            lp.width = LayoutParams.WRAP_CONTENT
+            lp.weight = 0f
+        } else {
+            lp.width = 0
+            lp.weight = 1f
+        }
+        textView.layoutParams = lp
     }
 
     private fun calculateTargetWidth(basicStyle: BasicStyle): Float {

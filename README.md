@@ -68,7 +68,12 @@
 ### 💡 已原生适配的应用
 
 - [**光锥音乐**](https://coneplayer.trantor.ink/)
-
+- **Flamingo**
+- [BBPlayer](https://bbplayer.roitium.com/)
+- MobiMusic
+- [Kanade](https://github.com/rcmiku/Kanade)
+- Sollin Player
+- [QZ Music](https://github.com/lqtmcstudio/QZMusic)
 ---
 
 ## 👥 贡献者

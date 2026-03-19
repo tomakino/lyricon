@@ -74,6 +74,7 @@
     <string name="item_text_color">Color</string>
     <string name="item_text_extract_cover_color">Extract cover color</string>
     <string name="item_text_extract_cover_gradient">Extract cover gradient</string>
+    <string name="item_text_enable_rainbow_color">Enable rainbow gradient</string>
     <string name="item_text_enable_custom_color">Custom color</string>
     <string name="item_text_color_light_mode">Color (light mode)</string>
     <string name="item_text_color_dark_mode">Color (dark mode)</string>
@@ -95,6 +96,10 @@
     <string name="item_text_relative_progress">Enable relative-progress lyrics</string>
     <string name="item_text_relative_progress_summary">If word timing is unavailable, treat the entire line as a single unit.</string>
     <string name="item_text_relative_progress_highlight">Show relative-progress highlight</string>
+    <string name="item_text_sustain_lift">Long-note lift effect</string>
+    <string name="item_text_sustain_glow">Long-note glow effect</string>
+    <string name="item_text_sustain_glow_color_mode_summary">Color mode is enabled, so glow does not take effect.</string>
+    <string name="item_text_sustain_glow_color_mode_hint">No effect when color mode is enabled (cover color/cover gradient/rainbow/custom).</string>
     <string name="item_text_color_normal">Normal color</string>
     <string name="item_text_color_background">Background color</string>
     <string name="item_text_color_highlight">Highlight color</string>
@@ -129,6 +134,13 @@
     <string name="item_base_insertion_before">Before</string>
     <string name="item_base_insertion_after">After</string>
     <string name="item_base_width">Width</string>
+    <string name="item_base_dynamic_width">Lyric width follows lyric length</string>
+    <string name="item_base_dynamic_width_auto_hide_clock">Auto-hide clock for long lyrics</string>
+    <string name="item_base_dynamic_width_auto_hide_clock_disabled_summary">Enable \"Lyric width follows lyric length\" first.</string>
+    <string name="item_base_dynamic_width_auto_hide_clock_summary">Only works when anchor is clock and you did not manually set \"hide clock while playing\".</string>
+    <string name="item_base_dynamic_width_summary">Disabled by default. When enabled, lyric area width adapts to current lyric content.</string>
+    <string name="item_base_xiaomi_island_temp_hide">Hide Super Island</string>
+    <string name="item_base_xiaomi_island_temp_hide_summary">Hide only while lyrics are visible and restore automatically afterward.</string>
     <string name="item_base_width_color_os_capsule">Width (Capsule mode)</string>
     <string name="item_base_margins">Margins</string>
     <string name="item_base_paddings">Padding</string>
@@ -142,6 +154,7 @@
     <string name="module_tag_translation">Translation</string>
     <string name="no_provider_available">No lyric providers available</string>
     <string name="item_base_lockscreen_hidden">Hide on lock screen</string>
+    <string name="item_base_double_tap_switch_clock">Double-tap to switch clock/lyrics</string>
     <string name="option_provider_list_full">Full</string>
     <string name="option_provider_list_short">Compact</string>
     <string name="no_query_app_permission">Please grant permission to read installed apps</string>
@@ -168,6 +181,8 @@
     <string name="item_translation_cache_size">Max Cache Size</string>
     <string name="item_translation_ignore_regex">Ignore regex</string>
     <string name="item_translation_custom_prompt">Custom Prompt</string>
+    <string name="item_translation_display_only">Show translation only</string>
+    <string name="item_translation_hide_in_lyric">Hide translation</string>
     <string name="item_translation_openai_api_key">OpenAI API Key</string>
     <string name="item_translation_openai_model">OpenAI model</string>
     <string name="item_translation_openai_base_url">OpenAI endpoint</string>

@@ -23,6 +23,9 @@ data class BasicStyle(
     var insertionOrder: Int = Defaults.INSERTION_ORDER,
     var width: Float = Defaults.WIDTH,
     var widthInColorOSCapsuleMode: Float = Defaults.WIDTH_IN_COLOROS_CAPSULE_MODE,
+    var dynamicWidthEnabled: Boolean = Defaults.DYNAMIC_WIDTH_ENABLED,
+    var dynamicWidthAutoHideClock: Boolean = Defaults.DYNAMIC_WIDTH_AUTO_HIDE_CLOCK,
+    var xiaomiIslandTempHideEnabled: Boolean = Defaults.XIAOMI_ISLAND_TEMP_HIDE_ENABLED,
     var margins: RectF = Defaults.MARGINS,
     var paddings: RectF = Defaults.PADDINGS,
     var visibilityRules: List<VisibilityRule> = Defaults.VISIBILITY_RULES,
@@ -30,7 +33,8 @@ data class BasicStyle(
     var noLyricHideTimeout: Int = Defaults.NO_LYRIC_HIDE_TIMEOUT,
     var noUpdateHideTimeout: Int = Defaults.NO_UPDATE_HIDE_TIMEOUT,
     var keywordHideTimeout: Int = Defaults.KEYWORD_HIDE_TIMEOUT,
-    var keywordHideMatches: List<String> = Defaults.KEYWORD_HIDE_MATCH
+    var keywordHideMatches: List<String> = Defaults.KEYWORD_HIDE_MATCH,
+    var doubleTapSwitchClock: Boolean = Defaults.DOUBLE_TAP_SWITCH_CLOCK
 ) : AbstractStyle(), Parcelable {
 
     @IgnoredOnParcel
@@ -59,6 +63,18 @@ data class BasicStyle(
         widthInColorOSCapsuleMode = preferences.getFloat(
             "lyric_style_base_width_in_coloros_capsule_mode",
             Defaults.WIDTH_IN_COLOROS_CAPSULE_MODE
+        )
+        dynamicWidthEnabled = preferences.getBoolean(
+            "lyric_style_base_dynamic_width_enabled",
+            Defaults.DYNAMIC_WIDTH_ENABLED
+        )
+        dynamicWidthAutoHideClock = preferences.getBoolean(
+            "lyric_style_base_dynamic_width_auto_hide_clock",
+            Defaults.DYNAMIC_WIDTH_AUTO_HIDE_CLOCK
+        )
+        xiaomiIslandTempHideEnabled = preferences.getBoolean(
+            "lyric_style_base_xiaomi_island_temp_hide_enabled",
+            Defaults.XIAOMI_ISLAND_TEMP_HIDE_ENABLED
         )
 
         margins = json.safeDecode<RectF>(
@@ -98,6 +114,10 @@ data class BasicStyle(
                 keywordHideMatches = it ?: emptyList()
                 keywordsHidePattern = null
             }
+        doubleTapSwitchClock = preferences.getBoolean(
+            "lyric_style_base_double_tap_switch_clock",
+            Defaults.DOUBLE_TAP_SWITCH_CLOCK
+        )
     }
 
     override fun onWrite(editor: SharedPreferences.Editor) {
@@ -105,6 +125,12 @@ data class BasicStyle(
         editor.putInt("lyric_style_base_insertion_order", insertionOrder)
         editor.putFloat("lyric_style_base_width", width)
         editor.putFloat("lyric_style_base_width_in_coloros_capsule_mode", widthInColorOSCapsuleMode)
+        editor.putBoolean("lyric_style_base_dynamic_width_enabled", dynamicWidthEnabled)
+        editor.putBoolean("lyric_style_base_dynamic_width_auto_hide_clock", dynamicWidthAutoHideClock)
+        editor.putBoolean(
+            "lyric_style_base_xiaomi_island_temp_hide_enabled",
+            xiaomiIslandTempHideEnabled
+        )
         editor.putString("lyric_style_base_margins", margins.toJson())
         editor.putString("lyric_style_base_paddings", paddings.toJson())
         editor.putString("lyric_style_base_visibility_rules", visibilityRules.toJson())
@@ -122,6 +148,7 @@ data class BasicStyle(
             keywordHideTimeout
         )
         editor.putString("lyric_style_base_timeout_hide_keywords", keywordHideMatches.toJson())
+        editor.putBoolean("lyric_style_base_double_tap_switch_clock", doubleTapSwitchClock)
     }
 
     object Defaults {
@@ -131,6 +158,9 @@ data class BasicStyle(
         const val INSERTION_ORDER: Int = INSERTION_ORDER_BEFORE
         const val WIDTH: Float = 100f
         const val WIDTH_IN_COLOROS_CAPSULE_MODE: Float = 70f
+        const val DYNAMIC_WIDTH_ENABLED: Boolean = false
+        const val DYNAMIC_WIDTH_AUTO_HIDE_CLOCK: Boolean = false
+        const val XIAOMI_ISLAND_TEMP_HIDE_ENABLED: Boolean = true
         val MARGINS: RectF = RectF()
         val PADDINGS: RectF = RectF()
         val VISIBILITY_RULES: List<VisibilityRule> = emptyList()
@@ -138,6 +168,7 @@ data class BasicStyle(
         const val NO_UPDATE_HIDE_TIMEOUT = 0
         const val KEYWORD_HIDE_TIMEOUT: Int = 0
         val KEYWORD_HIDE_MATCH: List<String> = listOf()
+        const val DOUBLE_TAP_SWITCH_CLOCK: Boolean = false
     }
 
     companion object {

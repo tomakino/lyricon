@@ -25,6 +25,7 @@ open class HookEntry : IYukiHookXposedInit {
             }
             loadApp(PackageNames.APPLICATION, AppHooker)
             loadApp(PackageNames.SYSTEM_UI, SystemUIHooker)
+            loadApp(PackageNames.SYSTEM_UI_PLUGIN, SystemUIHooker)
         }
     }
 
