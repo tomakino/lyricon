@@ -41,9 +41,11 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
     private const val MSG_SHOW_ROMA = 8
     private const val MSG_SONG_TRANSLATED = 9
     private const val MSG_SONG_TRANSLATION_TIMEOUT = 10
+    private const val MSG_VENDOR_SYNC_TICK = 11
 
     private const val UPDATE_INTERVAL_MS = 1000L / 60L
     private const val TRANSLATION_ONLY_WAIT_TIMEOUT_MS = 2500L
+    private const val PLAYBACK_ACTIVE_STALE_MS = 2500L
 
     @Volatile
     var isPlaying: Boolean = false
@@ -67,6 +69,8 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
 
     private var lastPostTime = 0L
     private var songVersion: Long = 0L
+    @Volatile
+    private var lastPositionUpdateAt: Long = 0L
 
     init {
         OplusCapsuleHooker.registerListener(this)
@@ -91,6 +95,13 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
         if (DEBUG) YLog.debug(tag = TAG, msg = "onPlaybackStateChanged: $isPlaying")
 
         this.isPlaying = isPlaying
+        if (isPlaying) {
+            lastPositionUpdateAt = SystemClock.uptimeMillis()
+            uiHandler.removeMessages(MSG_VENDOR_SYNC_TICK)
+            uiHandler.sendEmptyMessageDelayed(MSG_VENDOR_SYNC_TICK, PLAYBACK_ACTIVE_STALE_MS)
+        } else {
+            uiHandler.removeMessages(MSG_VENDOR_SYNC_TICK)
+        }
         uiHandler.obtainMessage(MSG_PLAYBACK_STATE, if (isPlaying) 1 else 0, 0).sendToTarget()
     }
 
@@ -98,6 +109,9 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
         // if (DEBUG) YLog.debug(tag = TAG, msg = "onPositionChanged: $position")
 
         val now = SystemClock.uptimeMillis()
+        lastPositionUpdateAt = now
+        uiHandler.removeMessages(MSG_VENDOR_SYNC_TICK)
+        uiHandler.sendEmptyMessageDelayed(MSG_VENDOR_SYNC_TICK, PLAYBACK_ACTIVE_STALE_MS)
 
         // 移除队列中旧的进度消息，确保合并
         uiHandler.removeMessages(MSG_POSITION)
@@ -119,6 +133,9 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
 
     override fun onSeekTo(position: Long) {
         if (DEBUG) YLog.debug(tag = TAG, msg = "onSeekTo: $position")
+        lastPositionUpdateAt = SystemClock.uptimeMillis()
+        uiHandler.removeMessages(MSG_VENDOR_SYNC_TICK)
+        uiHandler.sendEmptyMessageDelayed(MSG_VENDOR_SYNC_TICK, PLAYBACK_ACTIVE_STALE_MS)
 
         val msg = uiHandler.obtainMessage(MSG_SEEK_TO)
         msg.arg1 = (position shr 32).toInt()
@@ -149,6 +166,11 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
 
     // --- 集中式 UI 处理逻辑 ---
     override fun handleMessage(msg: Message): Boolean {
+        if (msg.what == MSG_VENDOR_SYNC_TICK) {
+            syncVendorTemporaryUi()
+            return true
+        }
+
         when (msg.what) {
             // provider改变时，重置歌曲版本号和当前歌曲
             MSG_PROVIDER_CHANGED -> {
@@ -479,9 +501,13 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
 
     private fun syncVendorTemporaryUi() {
         val enableXiaomiIslandHide = LyricPrefs.baseStyle.xiaomiIslandTempHideEnabled
+        val now = SystemClock.uptimeMillis()
+        val playbackActive = isPlaying
+                && (lastPositionUpdateAt <= 0L || now - lastPositionUpdateAt <= PLAYBACK_ACTIVE_STALE_MS)
         val shouldHideXiaomiIsland = StatusBarViewManager.controllers.any { controller ->
             val view = controller.lyricView
             enableXiaomiIslandHide
+                    && playbackActive
                     && view.isAttachedToWindow
                     && view.isVisible
         }

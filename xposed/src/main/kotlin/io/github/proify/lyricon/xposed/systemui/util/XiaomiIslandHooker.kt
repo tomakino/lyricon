@@ -24,23 +24,13 @@ import java.util.WeakHashMap
  */
 object XiaomiIslandHooker {
     private const val TAG = "XiaomiIslandHooker"
-    private val TARGET_ID_NAMES = setOf(
-        "island_container",
-        "island_music_container",
-        "music_container",
-        "audio_container",
-        "media_container"
-    )
-    private const val TARGET_CLASS_KEYWORD = "miui.systemui.dynamicisland"
+    private const val TARGET_ID_NAME = "island_container"
 
     private data class ViewState(
         val width: Int,
         val height: Int,
         val visibility: Int,
-        val alpha: Float,
-        val clickable: Boolean,
-        val enabled: Boolean,
-        val focusable: Boolean
+        val alpha: Float
     )
 
     private val islandViews = mutableListOf<WeakReference<View>>()
@@ -148,31 +138,11 @@ object XiaomiIslandHooker {
     }
 
     private fun tryTrackIslandView(view: View): Boolean {
-        val idName = if (view.id != View.NO_ID) {
-            runCatching { view.resources.getResourceEntryName(view.id) }.getOrNull()
-        } else {
-            null
-        }
-        val normalizedIdName = idName.orEmpty().lowercase()
-        val className = view.javaClass.name.lowercase()
-
-        val matchByExactId = normalizedIdName in TARGET_ID_NAMES
-        val matchByIslandId = normalizedIdName.contains("island")
-                && (normalizedIdName.contains("music")
-                || normalizedIdName.contains("audio")
-                || normalizedIdName.contains("media")
-                || normalizedIdName.contains("icon"))
-        val matchByClass = className.contains(TARGET_CLASS_KEYWORD)
-                || (className.contains("island")
-                && (className.contains("dynamic")
-                || className.contains("music")
-                || className.contains("audio")
-                || className.contains("media")
-                || className.contains("icon")
-                || className.contains("capsule")
-                || className.contains("bubble")))
-
-        if (!matchByExactId && !matchByIslandId && !matchByClass) return false
+        if (view.id == View.NO_ID) return false
+        val idName = runCatching {
+            view.resources.getResourceEntryName(view.id)
+        }.getOrNull() ?: return false
+        if (idName != TARGET_ID_NAME) return false
 
         val iterator = islandViews.iterator()
         var exists = false
@@ -186,7 +156,7 @@ object XiaomiIslandHooker {
         }
         if (!exists) {
             islandViews.add(WeakReference(view))
-            YLog.info(tag = TAG, msg = "Tracked island view: id=$idName class=${view.javaClass.name} view=$view")
+            YLog.info(tag = TAG, msg = "Tracked island_container: $view")
         }
         return true
     }
@@ -207,17 +177,12 @@ object XiaomiIslandHooker {
         val lp = view.layoutParams ?: return
 
         if (shouldHide) {
-            if (originalStates[view] == null) {
-                originalStates[view] = ViewState(
-                    width = lp.width,
-                    height = lp.height,
-                    visibility = view.visibility,
-                    alpha = view.alpha,
-                    clickable = view.isClickable,
-                    enabled = view.isEnabled,
-                    focusable = view.isFocusable
-                )
-            }
+            originalStates[view] = originalStates[view] ?: ViewState(
+                width = lp.width,
+                height = lp.height,
+                visibility = view.visibility,
+                alpha = view.alpha
+            )
             if (lp.width != 0 || lp.height != 0) {
                 lp.width = 0
                 lp.height = 0
@@ -228,15 +193,6 @@ object XiaomiIslandHooker {
             }
             if (view.visibility != View.GONE) {
                 view.visibility = View.GONE
-            }
-            if (view.isClickable) {
-                view.isClickable = false
-            }
-            if (view.isEnabled) {
-                view.isEnabled = false
-            }
-            if (view.isFocusable) {
-                view.isFocusable = false
             }
             view.requestLayout()
             return
@@ -253,15 +209,6 @@ object XiaomiIslandHooker {
         }
         if (view.visibility != originalState.visibility) {
             view.visibility = originalState.visibility
-        }
-        if (view.isClickable != originalState.clickable) {
-            view.isClickable = originalState.clickable
-        }
-        if (view.isEnabled != originalState.enabled) {
-            view.isEnabled = originalState.enabled
-        }
-        if (view.isFocusable != originalState.focusable) {
-            view.isFocusable = originalState.focusable
         }
         view.requestLayout()
     }
