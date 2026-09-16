@@ -16,6 +16,7 @@ import android.widget.TextView
 import androidx.core.graphics.toColorInt
 import androidx.core.view.doOnAttach
 import androidx.core.view.isVisible
+import io.github.proify.android.extensions.crc32
 import io.github.proify.android.extensions.dp
 import io.github.proify.android.extensions.isLandScape
 import io.github.proify.android.extensions.setColorAlpha
@@ -67,6 +68,7 @@ class StatusBarViewController(
     private var lastHighlightView: View? = null
     private var colorMonitorView: View? = null
     private var coverColorPaletteResult: ColorPaletteResult? = null
+    private var coverColorRequestVersion: Long = 0
     private var systemStatusBarColor: SystemStatusBarColor? = null
 
     private val colorChangeListener = object : OnColorChangeListener {
@@ -200,18 +202,35 @@ class StatusBarViewController(
 
     fun updateCoverThemeColors(coverFile: File?) {
         coverColorPaletteResult = null
+        val requestVersion = ++coverColorRequestVersion
+
+        // 新封面开始取色时先撤销上一张封面的配色，避免异步计算期间短暂显示旧颜色。
+        systemStatusBarColor?.let { updateStatusColor(it) }
+
+        if (coverFile == null) return
+
+        val bitmap = coverFile.toBitmap() ?: return
+
         try {
-            val bitmap = coverFile?.toBitmap() ?: return
+            // cover.png 会被每首歌反复覆盖，不能用固定文件名作为缓存键。
+            // 使用文件内容 CRC，使同一封面仍可命中缓存，而新封面会重新取色。
+            val signature = coverFile.crc32().toString()
             ColorExtractor.extractAsync(
                 bitmap = bitmap,
-                cacheKey = {
-                    coverFile.name
-                }) {
-                coverColorPaletteResult = it
-                systemStatusBarColor?.let { updateStatusColor(it) }
-                bitmap.recycle()
+                cacheKey = { signature }
+            ) { result ->
+                try {
+                    // 异步取色可能乱序完成，只允许最新一次封面请求更新 UI。
+                    if (requestVersion != coverColorRequestVersion) return@extractAsync
+
+                    coverColorPaletteResult = result
+                    systemStatusBarColor?.let { updateStatusColor(it) }
+                } finally {
+                    if (!bitmap.isRecycled) bitmap.recycle()
+                }
             }
         } catch (e: Exception) {
+            if (!bitmap.isRecycled) bitmap.recycle()
             YLog.error(TAG, "Failed to extract cover theme colors", e)
         }
     }

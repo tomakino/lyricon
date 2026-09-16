@@ -62,7 +62,6 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: 解码签名密钥
-        if: github.event.inputs.build_type == 'release'
         run: |
           echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.jks
           echo "密钥已保存到 release.jks"
@@ -88,7 +87,7 @@ jobs:
           if-no-files-found: warn
 
       - name: 清理敏感文件
-        if: github.event.inputs.build_type == 'release'
+        if: always()
         run: |
           rm -f release.jks
           echo "已清理敏感文件"
