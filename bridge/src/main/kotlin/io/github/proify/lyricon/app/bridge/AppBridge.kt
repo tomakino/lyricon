@@ -61,6 +61,28 @@ object AppBridge {
         /** 是否启用震动反馈 */
         const val KEY_HAPTIC: String = "lyric_style_base_gesture_haptic"
 
+        /**
+         * 是否启用「根窗口触摸拦截」(StatusBarTouchHooker)
+         *
+         * ## 这个开关是做什么的
+         *
+         * 部分系统（如 ColorOS）会在状态栏顶层叠一层容器抢走触摸，
+         * 导致**流体云显示时或非播放器界面**下：点击歌词、滑动切歌、展开面板失效。
+         *
+         * 开启后，模块会挂钩系统状态栏根窗口的 `dispatchTouchEvent`，
+         * 在事件到达那层容器之前判断是否点在歌词上：
+         * - 点在歌词上 → 由模块直接交给歌词处理；
+         * - 竖向滑动（想拉通知栏）→ 原样让渡回系统，不影响下拉通知栏；
+         * - 点在别处 → 完全不干预。
+         *
+         * ## 什么时候需要关掉
+         *
+         * 这是较底层的改动。若在个别机型上出现状态栏触摸异常
+         * （如通知栏拉不下来、状态栏点击无响应），可以关掉本开关，
+         * 歌词手势会退回系统的正常派发路径，无需卸载模块。
+         */
+        const val KEY_ROOT_TOUCH_HOOK: String = "lyric_style_base_gesture_root_touch_hook"
+
         /* ---------- 动作定义 ---------- */
 
         /** 无动作 */
@@ -82,6 +104,7 @@ object AppBridge {
 
         const val DEFAULT_ENABLED: Boolean = true
         const val DEFAULT_HAPTIC: Boolean = true
+        const val DEFAULT_ROOT_TOUCH_HOOK: Boolean = true
         const val DEFAULT_SWIPE_LEFT: Int = ACTION_NEXT
         const val DEFAULT_SWIPE_RIGHT: Int = ACTION_PREVIOUS
         const val DEFAULT_TAP: Int = ACTION_OPEN_CONTROL

@@ -236,6 +236,18 @@ object LyricPrefs {
         )
 
     /**
+     * 是否启用根窗口触摸拦截 ([io.github.proify.lyricon.xposed.systemui.hook.StatusBarTouchHooker])
+     *
+     * 关闭时拦截器即使已安装也不再接管任何触摸，歌词手势退回系统正常派发路径。
+     * 默认开启；偏好缺失（老版本升级）时同样按开启处理，保证行为不回退。
+     */
+    val rootTouchHookEnabled: Boolean
+        get() = baseStylePrefs.getBoolean(
+            LyricGesturePrefs.KEY_ROOT_TOUCH_HOOK,
+            LyricGesturePrefs.DEFAULT_ROOT_TOUCH_HOOK
+        )
+
+    /**
      * 读取指定手势对应的动作 ID,不存在或内容异常时返回 [default]
      *
      * @param key [LyricGesturePrefs.KEY_SWIPE_LEFT] 等手势偏好键

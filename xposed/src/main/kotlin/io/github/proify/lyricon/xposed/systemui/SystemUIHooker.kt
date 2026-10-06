@@ -27,6 +27,7 @@ import io.github.proify.lyricon.xposed.systemui.ai.translate.AiTranslator
 import io.github.proify.lyricon.xposed.systemui.hook.OplusCapsuleHooker
 import io.github.proify.lyricon.xposed.systemui.hook.StatusBarColorMonitor
 import io.github.proify.lyricon.xposed.systemui.hook.StatusBarDisableHooker
+import io.github.proify.lyricon.xposed.systemui.hook.StatusBarTouchHooker
 import io.github.proify.lyricon.xposed.systemui.hook.StatusBarViewResolver
 import io.github.proify.lyricon.xposed.systemui.hook.ViewVisibilityTracker
 import io.github.proify.lyricon.xposed.systemui.lyric.LyricDataHub
@@ -132,30 +133,51 @@ object SystemUIHooker : PackageHooker() {
         YLog.info(TAG, "onInit")
         val context = appContext ?: return
 
-        ScreenStateMonitor.initialize(context)
-        OplusCapsuleHooker.initialize(module, classLoader)
-        NotificationCoverHelper.initialize()
-        ViewVisibilityTracker.initialize(module, classLoader)
-        initDataChannel()
+        // 每一步独立保护：单个功能初始化失败不应连带阻断后续功能
+        // （历史问题：任一环节抛异常会导致其后的 Hook 全部不安装）
+        step(context, "ScreenStateMonitor") { ScreenStateMonitor.initialize(context) }
+        step(context, "OplusCapsuleHooker") { OplusCapsuleHooker.initialize(module, classLoader) }
+        step(context, "NotificationCoverHelper") { NotificationCoverHelper.initialize() }
+        step(context, "ViewVisibilityTracker") { ViewVisibilityTracker.initialize(module, classLoader) }
+        step(context, "initDataChannel") { initDataChannel() }
+        step(context, "initLyriconService") { initLyriconService() }
+        step(context, "StatusBarDisableHooker") {
+            StatusBarDisableHooker.inject(module, classLoader)
+            StatusBarDisableHooker.addListener(object :
+                StatusBarDisableHooker.OnStatusBarDisableListener {
+                private var lastDisableStateChanged: Boolean? = null
 
-        initLyriconService()
+                override fun onDisableStateChanged(shouldHide: Boolean, animate: Boolean) {
+                    if (lastDisableStateChanged == shouldHide) return
+                    lastDisableStateChanged = shouldHide
+                    StatusBarViewManager.forEach { it.onDisableStateChanged(shouldHide) }
+                }
+            })
+        }
 
-        StatusBarDisableHooker.inject(module, classLoader)
-        StatusBarDisableHooker.addListener(object :
-            StatusBarDisableHooker.OnStatusBarDisableListener {
-            private var lastDisableStateChanged: Boolean? = null
+        step(context, "StatusBarColorMonitor") { StatusBarColorMonitor.initialize(module, classLoader) }
+        // 根窗口触摸拦截：ColorOS 流体云胶囊铺满状态栏顶层后会吃掉全部触摸，
+        // 这里在状态栏窗口的派发入口挂拦截器，命中歌词区域时由模块直接接管。
+        // 是否真正接管由偏好开关 LyricGesturePrefs.KEY_ROOT_TOUCH_HOOK 控制。
+        step(context, "StatusBarTouchHooker") { StatusBarTouchHooker.initialize(module, classLoader) }
+        step(context, "AiTranslator") { AiTranslator.init(context) }
+        step(context, "SystemUIMediaUtils") { SystemUIMediaUtils.init(context) }
+        step(context, "StatusBarViewResolver") { StatusBarViewResolver.init(module, context) }
+    }
 
-            override fun onDisableStateChanged(shouldHide: Boolean, animate: Boolean) {
-                if (lastDisableStateChanged == shouldHide) return
-                lastDisableStateChanged = shouldHide
-                StatusBarViewManager.forEach { it.onDisableStateChanged(shouldHide) }
-            }
-        })
-
-        StatusBarColorMonitor.initialize(module, classLoader)
-        AiTranslator.init(context)
-        SystemUIMediaUtils.init(context)
-        StatusBarViewResolver.init(module, context)
+    /**
+     * 执行单个初始化步骤并隔离异常。
+     *
+     * 各功能初始化彼此独立，任何一步失败都不应连带阻断后续步骤——
+     * 否则（例如某个 ROM 上取色监控初始化抛异常）会导致其后的 Hook
+     * 全部不安装，且故障现象与"该功能本身不可用"难以区分。
+     */
+    private inline fun step(context: android.content.Context, name: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (t: Throwable) {
+            YLog.error(TAG, "init step $name failed", t)
+        }
     }
 
     private fun initLyriconService() {
