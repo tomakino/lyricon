@@ -128,13 +128,16 @@ open class LyricLineView(context: Context, attrs: AttributeSet? = null) :
     /** 配色统一入口：正文着色与彩虹渐变缓存。 */
     private val textStyle = LyricTextStyle()
 
+    /** 是否暂停时间驱动的帧推进。 */
+    private var animationPaused = false
+
     /** 帧调度：每帧步进当前渲染器，有变化时请求重绘。 */
     private val animator = FrameAnimator(
         onFrame = { deltaNanos ->
             activeRenderer.step(deltaNanos, _model, lineState, measuredWidth)
         },
         requestInvalidate = { postInvalidateOnAnimation() },
-        shouldRun = { isAttachedToWindow },
+        shouldRun = { isAttachedToWindow && isShown && !animationPaused },
         post = { runnable -> post(runnable) },
     )
 
@@ -149,6 +152,36 @@ open class LyricLineView(context: Context, attrs: AttributeSet? = null) :
     private var scrollUnlocked = false
 
     val textSize: Float get() = textPaint.textSize
+
+    /** 暂停或恢复帧推进；暂停不改变渲染器状态，恢复后从当前位置继续。 */
+    fun setAnimationPaused(paused: Boolean) {
+        if (animationPaused == paused) return
+        animationPaused = paused
+        syncAnimationState()
+    }
+
+    private fun syncAnimationState() {
+        if (isAttachedToWindow && isShown && !animationPaused) {
+            animator.startIfNeeded()
+        } else {
+            animator.stop()
+        }
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        syncAnimationState()
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        syncAnimationState()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        post { syncAnimationState() }
+    }
 
     fun setTextSize(size: Float) {
         val needsUpdate = textPaint.textSize != size || syncRenderer.bgPaint.textSize != size

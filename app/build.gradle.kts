@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.aboutlibraries.core)
     implementation(libs.accompanist.drawablepainter)
     implementation(libs.chrisbanes.haze)
+    implementation(libs.chrisbanes.haze.blur)
     implementation(libs.bonsai.core)
     implementation(libs.capsule.android)
     implementation(libs.lottie.compose) {

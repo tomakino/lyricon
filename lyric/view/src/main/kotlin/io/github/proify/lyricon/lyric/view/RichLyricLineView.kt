@@ -13,16 +13,17 @@ import android.view.Gravity
 import android.widget.LinearLayout
 import androidx.core.graphics.withScale
 import androidx.core.view.forEach
+import io.github.proify.lyricon.lyric.model.LyricLine
 import io.github.proify.lyricon.lyric.model.interfaces.IRichLyricLine
 import io.github.proify.lyricon.lyric.view.line.LyricLineView
 
 @SuppressLint("ViewConstructor")
 class RichLyricLineView(
     context: Context,
-    var displayTranslation: Boolean = true,
+    displayTranslation: Boolean = true,
     var enableRelativeProgress: Boolean = false,
     var enableRelativeProgressHighlight: Boolean = false,
-    var displayRoma: Boolean = true
+    displayRoma: Boolean = true
 ) : LinearLayout(context), UpdatableColor {
 
     val main = LyricLineView(context)
@@ -30,8 +31,51 @@ class RichLyricLineView(
 
     var alwaysShowSecondary = false
 
+    /** 是否暂停 main/secondary 的帧推进。 */
+    var animationsPaused: Boolean = false
+        private set
+
+    /** 暂停或恢复两行的帧推进。 */
+    fun setAnimationsPaused(paused: Boolean) {
+        if (animationsPaused == paused) return
+        animationsPaused = paused
+        main.setAnimationPaused(paused)
+        secondary.setAnimationPaused(paused)
+    }
+
+    /** 当前行的视图层时间轴单元。 */
+    internal var timedLine: TimedLine? = null
+
+    /** 当前视觉行是否为歌名标题行。 */
+    var isTitleLine: Boolean = false
+        private set
+
     var renderScale = 1.0f
         private set
+
+    /**
+     * 是否显示翻译行。
+     *
+     * 开关变化时必须同步到 [assembler] 并立即重装配次行，否则当前行会继续使用旧标志，
+     * 直到歌词换行才生效。
+     */
+    var displayTranslation: Boolean = displayTranslation
+        set(value) {
+            if (field == value) return
+            field = value
+            applyDisplayFlags()
+        }
+
+    /** 是否显示罗马音行；变化时与 [displayTranslation] 一样立即生效。 */
+    var displayRoma: Boolean = displayRoma
+        set(value) {
+            if (field == value) return
+            field = value
+            applyDisplayFlags()
+        }
+
+    /** 上一次已应用到 [secondary] 的次行内容，用于跳过无变化的重复装配。 */
+    private var lastSecondaryLine: LyricLine? = null
 
     private val assembler = LyricLineAssembler(
         displayTranslation, displayRoma,
@@ -41,6 +85,8 @@ class RichLyricLineView(
     private var animationTransition = false
     private var pendingLine: IRichLyricLine? = null
     private var pendingPosition: Long? = null
+    private var pendingIsTitle = false
+    private var appliedTitle = false
     private var requestMarquee = false
 
     var rawLine: IRichLyricLine? = null
@@ -57,6 +103,12 @@ class RichLyricLineView(
             }
         }
 
+    /** 设置行内容及标题行标记；动画期间与内容一起延迟到切换点应用。 */
+    fun setLine(line: IRichLyricLine?, isTitle: Boolean) {
+        pendingIsTitle = isTitle
+        this.line = line
+    }
+
     init {
         orientation = VERTICAL
         gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -66,9 +118,10 @@ class RichLyricLineView(
     }
 
     fun reset() {
+        pendingIsTitle = false
+        animationTransition = false
         line = null
         renderScale = 1.0f
-        animationTransition = false
         pendingLine = null
         pendingPosition = null
         alwaysShowSecondary = false
@@ -93,7 +146,7 @@ class RichLyricLineView(
         updateLayoutTransitionX(config)
     }
 
-    fun notifyLineChanged() = refreshLines()
+    fun notifyLineChanged() = refreshSecondary()
 
     fun seekTo(position: Long) {
         if (animationTransition) {
@@ -200,20 +253,50 @@ class RichLyricLineView(
     private var oldLine: IRichLyricLine? = null
 
     private fun refreshLines() {
-        if (oldLine === line) return
+        if (oldLine === line && appliedTitle == pendingIsTitle) return
         oldLine = line
+        appliedTitle = pendingIsTitle
+        isTitleLine = pendingIsTitle
 
-        val mainResult = assembler.buildMain(line)
+        val mainResult = assembler.buildMain(line, isTitleLine)
         main.setLyric(mainResult.line)
         main.isScrollOnly = mainResult.isScrollOnly
 
         val secResult = assembler.buildSecondary(line)
         alwaysShowSecondary = secResult.alwaysShow
         secondary.visibleIfChanged = secResult.alwaysShow
+        lastSecondaryLine = secResult.line
         secondary.setLyric(secResult.line)
         secondary.isScrollOnly = secResult.isScrollOnly
 
         if (requestMarquee) requestStartMarquee()
+    }
+
+    /** 把最新的显示开关同步给装配器，并立即重装配次行。 */
+    private fun applyDisplayFlags() {
+        assembler.updateFlags(
+            displayTranslation, displayRoma,
+            enableRelativeProgress, enableRelativeProgressHighlight
+        )
+        refreshSecondary()
+    }
+
+    /**
+     * 只重装配翻译 / 罗马音次行。
+     *
+     * 主行内容与翻译开关无关；重建主行会调用 [LyricLineView.setLyric] 并重置逐字进度，
+     * 因此开关变化时只刷新次行。
+     */
+    private fun refreshSecondary() {
+        val secResult = assembler.buildSecondary(line)
+        alwaysShowSecondary = secResult.alwaysShow
+        secondary.visibleIfChanged = secResult.alwaysShow
+        secondary.isScrollOnly = secResult.isScrollOnly
+        if (lastSecondaryLine != secResult.line) {
+            lastSecondaryLine = secResult.line
+            secondary.setLyric(secResult.line)
+            if (requestMarquee) requestStartMarquee()
+        }
     }
 
     private fun applyLineStyle(

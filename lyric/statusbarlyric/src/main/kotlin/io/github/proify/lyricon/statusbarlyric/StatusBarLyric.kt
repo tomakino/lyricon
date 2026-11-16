@@ -138,11 +138,13 @@ class StatusBarLyric(
             if (value) {
                 // 进入休眠：先丢弃过期请求，避免下次亮屏跳到陈旧位置
                 pendingSleepPosition = null
+                textView.setAnimationsPaused(true)
             } else {
                 // 退出休眠：只有休眠期间真的收到过定位请求才 seek。
                 // 若直接 seek(0)，会把歌词错误地拉回歌曲开头。
                 pendingSleepPosition?.let { seekTo(it) }
                 pendingSleepPosition = null
+                textView.setAnimationsPaused(false)
             }
         }
 

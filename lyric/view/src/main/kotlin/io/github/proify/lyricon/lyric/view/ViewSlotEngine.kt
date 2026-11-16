@@ -7,23 +7,24 @@
 package io.github.proify.lyricon.lyric.view
 
 import android.view.ViewGroup
-import io.github.proify.lyricon.lyric.model.interfaces.IRichLyricLine
 
 internal class ViewSlotEngine(
     private val container: ViewGroup,
 ) {
     val toRemove = mutableListOf<RichLyricLineView>()
-    val toAdd = mutableListOf<IRichLyricLine>()
+    val toAdd = mutableListOf<TimedLine>()
 
-    fun sync(matches: List<IRichLyricLine>, active: MutableList<IRichLyricLine>) {
+    fun sync(matches: List<TimedLine>, active: MutableList<TimedLine>) {
         toRemove.clear()
         toAdd.clear()
 
         for (i in 0 until container.childCount) {
             val view = container.getChildAt(i) as? RichLyricLineView ?: continue
-            if (view.line !in matches) toRemove.add(view)
+            val timed = view.timedLine ?: continue
+            if (matches.none { it.line == timed.line }) toRemove.add(view)
         }
-        matches.forEach { if (it !in active) toAdd.add(it) }
-        if (toRemove.isEmpty() && toAdd.isEmpty()) return
+        matches.forEach { match ->
+            if (active.none { it.line == match.line }) toAdd.add(match)
+        }
     }
 }

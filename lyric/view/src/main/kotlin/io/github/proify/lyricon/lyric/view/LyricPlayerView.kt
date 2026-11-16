@@ -9,6 +9,7 @@ package io.github.proify.lyricon.lyric.view
 import android.content.Context
 import android.util.AttributeSet
 import android.view.Gravity
+import android.view.View
 import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import androidx.annotation.CallSuper
@@ -20,6 +21,7 @@ import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.lyric.model.extensions.TimingNavigator
 import io.github.proify.lyricon.lyric.model.interfaces.IRichLyricLine
 import io.github.proify.lyricon.lyric.view.line.LyricLineView
+import io.github.proify.lyricon.lyric.view.yoyo.AnimConfig
 import io.github.proify.lyricon.lyric.view.yoyo.AnimSpeed
 import io.github.proify.lyricon.lyric.view.yoyo.YoYoPresets
 import io.github.proify.lyricon.lyric.view.yoyo.animateUpdate
@@ -31,7 +33,6 @@ open class LyricPlayerView(
 ) : LinearLayout(context, attributes), UpdatableColor {
 
     companion object {
-        internal const val KEY_SONG_TITLE_LINE: String = "TitleLine"
         private const val MIN_GAP_DURATION: Long = 8 * 1000
         //private const val TAG = "LyricPlayerView"
     }
@@ -45,13 +46,34 @@ open class LyricPlayerView(
     private var currentInterlude: InterludeTracker.Interlude? = null
     private var isInInterlude = false
 
-    private val activeLines = mutableListOf<IRichLyricLine>()
+    private val activeLines = mutableListOf<TimedLine>()
+    private var titleLine: RichLyricLine? = null
+    private var titleView: RichLyricLineView? = null
+
+    /** 是否暂停所有行视图的帧推进。 */
+    var animationsPaused: Boolean = false
+        private set
     private val textRecycleView by lazy { RichLyricLineView(context) }
     private val defaultLp = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
 
     private val tempMatches = mutableListOf<TimedLine>()
 
     private var layoutTransitionHandler: LayoutTransitionX? = null
+
+    /** 行切换动画进行中。 */
+    private var switching = false
+
+    /** 切换世代，用于忽略被取消的旧动画回调。 */
+    private var switchGeneration = 0
+
+    /** 切换动画期间收到的最新歌曲/文本，动画结束后应用。 */
+    private var pendingSong: Song? = null
+    private var hasPendingSong = false
+    private var pendingText: String? = null
+    private var hasPendingText = false
+
+    /** 最近一次外部播放位置。 */
+    private var lastPosition: Long? = null
 
     val lyricCountChangeListeners = CopyOnWriteArraySet<LyricCountChangeListener>()
 
@@ -87,26 +109,41 @@ open class LyricPlayerView(
 
     var song: Song? = null
         set(value) {
+            if (switching) {
+                pendingSong = value
+                hasPendingSong = true
+                return
+            }
             isTextMode = false
             if (value != null) {
-                val firstActive = activeLines.firstOrNull()
-                val exiting = firstActive.isTitleLine() && resolveTitle(value) == firstActive?.text
-                if (!exiting) reset()
+                val prepared = SongPreprocessor(style.placeholder).prepare(value)
+                titleLine = prepared.title
+                clearLyricViews()
+                lineList = prepared.lines
+                timingNavigator = TimingNavigator(prepared.lines.toTypedArray())
+                field = value
 
-                val processor = SongPreprocessor(style.placeholder)
-                val lines = processor.prepare(value)
-                lineList = lines
-                timingNavigator = TimingNavigator(lines.toTypedArray())
+                val position = lastPosition
+                if (position != null) {
+                    updatePosition(position)
+                } else {
+                    syncTitle()
+                }
             } else {
                 reset()
                 lineList = null
                 timingNavigator = emptyNavigator()
+                field = value
             }
-            field = value
         }
 
     var text: String? = null
         set(value) {
+            if (switching) {
+                pendingText = value
+                hasPendingText = true
+                return
+            }
             field = value
             if (!isTextMode) {
                 reset(); isTextMode = true
@@ -117,6 +154,7 @@ open class LyricPlayerView(
 
             if (!contains(textRecycleView)) {
                 addView(textRecycleView, defaultLp)
+                textRecycleView.setAnimationsPaused(animationsPaused)
                 updateTextLineViewStyle(style)
             }
             val old = textRecycleView.line
@@ -129,17 +167,31 @@ open class LyricPlayerView(
             )
 
             if (style.animation.enabled && preset != null) {
-                animateUpdate(preset) {
+                animateUpdate(preset, onCompleted = { cancelled ->
+                    if (!cancelled) {
+                        lyricCountChangeListeners.forEach {
+                            it.onLyricTextChanged(old?.text ?: "", value)
+                        }
+                    }
+                }) {
                     textRecycleView.line = line
                     textRecycleView.requestStartMarquee()
                 }
             } else {
                 textRecycleView.line = line
                 textRecycleView.requestStartMarquee()
+                lyricCountChangeListeners.forEach { it.onLyricTextChanged(old?.text ?: "", value) }
             }
-
-            lyricCountChangeListeners.forEach { it.onLyricTextChanged(old?.text ?: "", value) }
         }
+
+    /** 暂停或恢复所有行视图的帧推进。 */
+    fun setAnimationsPaused(paused: Boolean) {
+        if (animationsPaused == paused) return
+        animationsPaused = paused
+        forEach {
+            if (it is RichLyricLineView) it.setAnimationsPaused(paused)
+        }
+    }
 
     fun setStyle(style: LyricViewStyle) {
         this.style = style
@@ -181,6 +233,15 @@ open class LyricPlayerView(
     fun setPosition(position: Long) = updatePosition(position)
 
     fun reset() {
+        switchGeneration++
+        switching = false
+        pendingSong = null
+        hasPendingSong = false
+        pendingText = null
+        hasPendingText = false
+        lastPosition = null
+        titleLine = null
+        titleView = null
         removeAllViews()
         activeLines.clear()
         currentInterlude = null
@@ -210,12 +271,22 @@ open class LyricPlayerView(
 
     private fun updatePosition(position: Long, seekTo: Boolean = false) {
         if (isTextMode) return
+        lastPosition = position
+        if (switching) {
+            forEach { view ->
+                if (view is RichLyricLineView) {
+                    if (seekTo) view.seekTo(position) else view.setPosition(position)
+                }
+            }
+            return
+        }
 
         tempMatches.clear()
         timingNavigator.forEachAtOrPrevious(position) { tempMatches.add(it) }
         val matches = tempMatches
 
         syncViews(matches)
+        if (!switching) syncTitle()
 
         forEach { view ->
             if (view is RichLyricLineView) {
@@ -230,68 +301,221 @@ open class LyricPlayerView(
     }
 
     private fun syncViews(matches: List<TimedLine>) {
+        if (switching) return
+
         val engine = slotEngine
-        val matchLines: List<IRichLyricLine> = matches.map { it.line }
-        engine.sync(matchLines, activeLines)
+        engine.sync(matches, activeLines)
 
         if (engine.toRemove.isEmpty() && engine.toAdd.isEmpty()) return
 
+        val speed = AnimSpeed.fromPref(style.animation.speed)
+        val animatedPreset = if (style.animation.enabled) {
+            YoYoPresets.getById(style.animation.presetId, speed)
+        } else {
+            null
+        }
+
+        // 标题槽位 → 第一行歌词
+        if (activeLines.isEmpty() && engine.toRemove.isEmpty() && engine.toAdd.size == 1) {
+            val title = titleView
+            val newLine = engine.toAdd[0]
+            if (title != null && title.timedLine == null && title.visibility == View.VISIBLE) {
+                if (animatedPreset != null) {
+                    startViewSwitch(title, newLine, animatedPreset)
+                } else {
+                    applyViewSwitch(title, newLine)
+                }
+                return
+            }
+        }
+
+        // 歌词 → 标题槽位（进度回退到标题区）
+        if (activeLines.size == 1 && engine.toRemove.size == 1 && engine.toAdd.isEmpty()) {
+            val title = titleLine
+            if (title != null) {
+                val recycle = engine.toRemove.first()
+                if (animatedPreset != null) {
+                    startTitleSwitch(recycle, title, animatedPreset)
+                } else {
+                    applyTitleSwitch(recycle, title)
+                }
+                return
+            }
+        }
+
         if (activeLines.size == 1 && engine.toRemove.size == 1 && engine.toAdd.size == 1) {
-            val recycle = getChildAtOrNull(0) as? RichLyricLineView
+            val recycle = (0 until childCount)
+                .mapNotNull { getChildAtOrNull(it) as? RichLyricLineView }
+                .firstOrNull { it.timedLine != null }
             val newLine = engine.toAdd[0]
             if (recycle != null) {
-                val speed = AnimSpeed.fromPref(style.animation.speed)
-                val preset by lazy { YoYoPresets.getById(style.animation.presetId, speed) }
-                if (style.animation.enabled && preset != null) {
-                    // 检查是否是标题行过渡
-                    val isTitleTransition = recycle.line?.isTitleLine() == true
-                    
-                    // 重置动画状态
-                    recycle.resetAnimationState()
-                    activeLines[0] = newLine
-                    
-                    // 如果是标题行过渡，先更新内容再执行动画
-                    if (isTitleTransition) {
-                        recycle.line = newLine
-                        recycle.requestStartMarquee()
-                        updateViewsVisibility()
-                    } else {
-                        recycle.beginAnimationTransition()
-                        recycle.line = newLine
-                        animateUpdate(preset!!) {
-                            recycle.endAnimationTransition()
-                            recycle.requestStartMarquee()
-                            updateViewsVisibility()
-                        }
-                    }
+                if (animatedPreset != null) {
+                    startViewSwitch(recycle, newLine, animatedPreset)
                 } else {
-                    activeLines[0] = newLine
-                    recycle.line = newLine
-                    recycle.requestStartMarquee()
+                    applyViewSwitch(recycle, newLine)
                 }
             }
         } else {
-            engine.toRemove.forEach {
-                removeView(it); activeLines.remove(it.line)
+            val removed = mutableListOf<TimedLine>()
+            engine.toRemove.forEach { view ->
+                val timed = view.timedLine
+                if (timed != null) {
+                    removed.add(timed)
+                    activeLines.removeAll { it.line == timed.line }
+                }
+                removeView(view)
             }
-            engine.toAdd.forEach { line ->
-                activeLines.add(line)
-                val view = createDoubleLineView(line)
+            engine.toAdd.forEach { timed ->
+                activeLines.add(timed)
+                val view = createDoubleLineView(timed)
                 autoAddView(view)
                 view.requestStartMarquee()
             }
+            updateViewsVisibility()
+            notifyLyricChanged(engine.toAdd, removed)
         }
+    }
 
+    private fun startViewSwitch(
+        recycle: RichLyricLineView,
+        newLine: TimedLine,
+        preset: Pair<AnimConfig, AnimConfig>,
+    ) {
+        val generation = ++switchGeneration
+        switching = true
+        recycle.resetAnimationState()
+        recycle.beginAnimationTransition()
+        recycle.setLine(newLine.line, false)
+        animateUpdate(preset, onCompleted = { cancelled ->
+            if (generation == switchGeneration) {
+                if (cancelled) {
+                    switching = false
+                } else {
+                    commitViewSwitch(recycle, newLine)
+                }
+            }
+        }) {
+            recycle.endAnimationTransition()
+            recycle.requestStartMarquee()
+            updateViewsVisibility()
+        }
+    }
+
+    private fun startTitleSwitch(
+        recycle: RichLyricLineView,
+        title: RichLyricLine,
+        preset: Pair<AnimConfig, AnimConfig>,
+    ) {
+        val generation = ++switchGeneration
+        switching = true
+        recycle.resetAnimationState()
+        recycle.beginAnimationTransition()
+        recycle.setLine(title, true)
+        animateUpdate(preset, onCompleted = { cancelled ->
+            if (generation == switchGeneration) {
+                if (cancelled) {
+                    switching = false
+                } else {
+                    commitTitleSwitch(recycle)
+                }
+            }
+        }) {
+            recycle.endAnimationTransition()
+            recycle.requestStartMarquee()
+            updateViewsVisibility()
+        }
+    }
+
+    private fun commitTitleSwitch(recycle: RichLyricLineView) {
+        switching = false
+        val old = activeLines.firstOrNull()
+        activeLines.clear()
+        recycle.timedLine = null
+        titleView = recycle
+        notifyLyricChanged(emptyList(), old?.let { listOf(it) } ?: emptyList())
+        updateViewsVisibility()
+        syncTitle()
+
+        val position = lastPosition
+        val applied = flushPending()
+        if (!applied && position != null && !switching && !isTextMode) {
+            updatePosition(position)
+        }
+    }
+
+    private fun applyTitleSwitch(recycle: RichLyricLineView, title: RichLyricLine) {
+        val old = activeLines.firstOrNull()
+        recycle.resetAnimationState()
+        recycle.setLine(title, true)
+        recycle.timedLine = null
+        activeLines.clear()
+        titleView = recycle
+        recycle.requestStartMarquee()
+        updateViewsVisibility()
+        syncTitle()
+        notifyLyricChanged(emptyList(), old?.let { listOf(it) } ?: emptyList())
+    }
+
+    private fun commitViewSwitch(recycle: RichLyricLineView, newLine: TimedLine) {
+        switching = false
+        if (recycle === titleView) titleView = null
+        val old = activeLines.firstOrNull()
+        activeLines.clear()
+        activeLines.add(newLine)
+        recycle.timedLine = newLine
+        notifyLyricChanged(listOf(newLine), old?.let { listOf(it) } ?: emptyList())
         updateViewsVisibility()
 
-        lyricCountChangeListeners.forEach {
-            it.onLyricChanged(engine.toAdd, engine.toRemove.mapNotNull { it.line })
+        val position = lastPosition
+        val applied = flushPending()
+        if (!applied && position != null && !switching && !isTextMode) {
+            updatePosition(position)
         }
+    }
+
+    private fun applyViewSwitch(recycle: RichLyricLineView, newLine: TimedLine) {
+        if (recycle === titleView) titleView = null
+        val old = activeLines.firstOrNull()
+        recycle.resetAnimationState()
+        recycle.setLine(newLine.line, false)
+        recycle.timedLine = newLine
+        activeLines.clear()
+        activeLines.add(newLine)
+        recycle.requestStartMarquee()
+        updateViewsVisibility()
+        notifyLyricChanged(listOf(newLine), old?.let { listOf(it) } ?: emptyList())
+    }
+
+    private fun notifyLyricChanged(added: List<TimedLine>, removed: List<TimedLine>) {
+        val addedLyrics = added.map { it.line }
+        val removedLyrics = removed.map { it.line }
+        if (addedLyrics.isEmpty() && removedLyrics.isEmpty()) return
+        lyricCountChangeListeners.forEach { it.onLyricChanged(addedLyrics, removedLyrics) }
+    }
+
+    private fun flushPending(): Boolean {
+        var applied = false
+        if (hasPendingText) {
+            hasPendingText = false
+            val value = pendingText
+            pendingText = null
+            text = value
+            applied = true
+        }
+        if (hasPendingSong) {
+            hasPendingSong = false
+            val value = pendingSong
+            pendingSong = null
+            song = value
+            applied = true
+        }
+        return applied
     }
 
     private fun applyVisibility() {
         val children =
             (0 until childCount).mapNotNull { i -> getChildAtOrNull(i) as? RichLyricLineView }
+                .filter { it !== titleView || switching }
         if (children.isEmpty()) return
 
         ViewVisibilityPolicy.apply(ViewVisibilityPolicy.Input(children, style))
@@ -339,18 +563,73 @@ open class LyricPlayerView(
 
     // --- helpers ---
 
-    private fun createDoubleLineView(line: IRichLyricLine) = RichLyricLineView(
+    private fun createDoubleLineView(timed: TimedLine) = RichLyricLineView(
         context,
         displayTranslation = isDisplayTranslation,
         displayRoma = isDisplayRoma,
         enableRelativeProgress = style.primary.relativeProgress,
         enableRelativeProgressHighlight = style.primary.relativeHighlight,
     ).apply {
-        this.line = line
+        timedLine = timed
+        setLine(timed.line, false)
+        setAnimationsPaused(this@LyricPlayerView.animationsPaused)
         setStyle(style)
         setMainLyricPlayListener(mainPlayListener)
         setSecondaryLyricPlayListener(secondaryPlayListener)
         setTransitionConfig(_transitionConfig)
+    }
+
+    private fun createTitleView() = RichLyricLineView(
+        context,
+        displayTranslation = isDisplayTranslation,
+        displayRoma = isDisplayRoma,
+        enableRelativeProgress = style.primary.relativeProgress,
+        enableRelativeProgressHighlight = style.primary.relativeHighlight,
+    ).apply {
+        setLine(titleLine, true)
+        setAnimationsPaused(this@LyricPlayerView.animationsPaused)
+        setStyle(style)
+        setMainLyricPlayListener(mainPlayListener)
+        setSecondaryLyricPlayListener(secondaryPlayListener)
+        setTransitionConfig(_transitionConfig)
+    }
+
+    private fun syncTitle() {
+        if (switching) return
+
+        val line = titleLine
+        val view = titleView
+        if (line == null) {
+            view?.visibilityIfChanged = View.GONE
+            return
+        }
+
+        val firstBegin = lineList?.firstOrNull()?.begin
+        val position = lastPosition ?: 0L
+        val show = firstBegin == null || position < firstBegin
+        if (!show) {
+            view?.visibilityIfChanged = View.GONE
+            return
+        }
+
+        val target = view ?: createTitleView().also {
+            titleView = it
+            autoAddView(it)
+            it.requestStartMarquee()
+        }
+        if (target.line?.text != line.text) {
+            target.setLine(line, true)
+            target.requestStartMarquee()
+        }
+        target.visibilityIfChanged = View.VISIBLE
+        target.requestStartMarquee()
+    }
+
+    private fun clearLyricViews() {
+        val views = mutableListOf<RichLyricLineView>()
+        forEach { if (it is RichLyricLineView && it.timedLine != null) views.add(it) }
+        views.forEach { removeView(it) }
+        activeLines.clear()
     }
 
     private fun autoAddView(view: RichLyricLineView) {
@@ -389,5 +668,3 @@ open class LyricPlayerView(
     }
 }
 
-fun IRichLyricLine?.isTitleLine(): Boolean =
-    this?.metadata?.getBoolean(LyricPlayerView.KEY_SONG_TITLE_LINE, false) == true

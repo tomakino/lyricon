@@ -6,6 +6,7 @@
 
 package io.github.proify.lyricon.app.activity.lyric
 
+import android.R.attr.scheme
 import android.app.Activity
 import android.content.ClipData
 import androidx.activity.SystemBarStyle
@@ -771,7 +772,9 @@ private fun markdownColors(): DefaultMarkdownColors {
             codeBackground = s.surfaceContainer,
             inlineCodeBackground = s.surfaceContainer,
             dividerColor = s.onSurfaceVariantSummary,
-            tableBackground = s.surfaceContainer
+            tableBackground = s.surfaceContainer,
+            highlightText = s.onSurface,
+            highlightBackground = s.surfaceContainer
         )
     }
 }

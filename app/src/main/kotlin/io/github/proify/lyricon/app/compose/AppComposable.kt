@@ -35,10 +35,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.fontscaling.MathUtils.lerp
+import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import io.github.proify.lyricon.app.R
@@ -94,24 +95,41 @@ fun BlurTopAppBar(
     titleOnClick: () -> Unit = {},
 ) {
     val blurRadius = if (isSystemInDarkTheme()) 50.dp else 25.dp
-    val hazeStyle = HazeStyle(
-        blurRadius = blurRadius,
-        noiseFactor = 0f,
-        backgroundColor = MiuixTheme.colorScheme.surface,
-        tint = HazeTint(
-            MiuixTheme.colorScheme.surface.copy(
-                if (scrollBehavior == null || scrollBehavior.state.collapsedFraction <= 0f) {
-                    1f
-                } else {
-                    lerp(1f, 0.76f, (scrollBehavior.state.collapsedFraction))
-                }
+    val surfaceColor = MiuixTheme.colorScheme.surface
+    // HazeBlurStyle 按身份比较，必须 remember；折叠比例在 style 块内读取，由 haze 节点观察
+    val hazeStyle = remember(blurRadius, surfaceColor, scrollBehavior) {
+        HazeBlurStyle {
+            blurRadius(blurRadius)
+            noiseFactor(0f)
+            backgroundColor(surfaceColor)
+            colorEffects(
+                listOf(
+                    HazeColorEffect.tint(
+                        surfaceColor.copy(
+                            alpha = if (scrollBehavior == null ||
+                                scrollBehavior.state.collapsedFraction <= 0f
+                            ) {
+                                1f
+                            } else {
+                                lerp(1f, 0.76f, scrollBehavior.state.collapsedFraction)
+                            }
+                        )
+                    )
+                )
             )
-        )
-    )
+        }
+    }
 
     TopAppBar(
         title = title,
-        modifier = if (hazeState != null) modifier.hazeEffect(hazeState, hazeStyle) else modifier,
+        modifier = if (hazeState != null) {
+            modifier.hazeBlur(
+                input = HazeInput.Sources(hazeState),
+                style = hazeStyle
+            )
+        } else {
+            modifier
+        },
         color = color,
         largeTitle = largeTitle,
         navigationIcon = navigationIcon,

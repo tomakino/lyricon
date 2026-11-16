@@ -19,7 +19,8 @@ object YoYoAnimation {
         target: T,
         outConfig: AnimConfig,
         inConfig: AnimConfig,
-        action: (T) -> Unit
+        action: (T) -> Unit,
+        onCompleted: (T, Boolean) -> Unit = { _, _ -> },
     ) {
         cancelAnimation(target)
         target.setTag(KEY_ANIM_LOCK, true)
@@ -48,11 +49,14 @@ object YoYoAnimation {
                             override fun onAnimationRepeat(p0: Animator) {}
                             override fun onAnimationCancel(p0: Animator) {
                                 target.setTag(KEY_ANIM_LOCK, false)
+                                target.setTag(KEY_ANIM_HANDLE, null)
+                                onCompleted(target, true)
                             }
 
                             override fun onAnimationEnd(p0: Animator) {
                                 target.setTag(KEY_ANIM_LOCK, false)
                                 target.setTag(KEY_ANIM_HANDLE, null)
+                                onCompleted(target, false)
                             }
                         })
                         .playOn(target)
@@ -79,9 +83,10 @@ object YoYoAnimation {
  */
 fun <T : View> T.animateUpdate(
     preset: Pair<AnimConfig, AnimConfig>,
+    onCompleted: (cancelled: Boolean) -> Unit = {},
     block: T.() -> Unit
 ) {
-    YoYoAnimation.switchContent(this, preset.first, preset.second) {
-        it.block()
+    YoYoAnimation.switchContent(this, preset.first, preset.second, { it.block() }) { _, cancelled ->
+        onCompleted(cancelled)
     }
 }

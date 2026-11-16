@@ -633,6 +633,8 @@ private fun rememberAiMarkdownColors(): DefaultMarkdownColors {
             inlineCodeBackground = scheme.surfaceContainer,
             dividerColor = scheme.onSurfaceVariantSummary,
             tableBackground = scheme.surfaceContainer,
+            highlightText = scheme.onSurface,
+            highlightBackground = scheme.surfaceContainer
         )
     }
 }

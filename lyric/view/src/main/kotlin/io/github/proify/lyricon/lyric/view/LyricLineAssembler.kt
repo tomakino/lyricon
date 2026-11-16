@@ -28,10 +28,10 @@ internal class LyricLineAssembler(
 
     data class MainResult(val line: LyricLine, val isScrollOnly: Boolean)
 
-    fun buildMain(source: IRichLyricLine?): MainResult {
+    fun buildMain(source: IRichLyricLine?, isTitle: Boolean): MainResult {
         if (source == null) return MainResult(LyricLine(), false)
 
-        val shouldGen = enableRelativeProgress && source.isTitleLine().not()
+        val shouldGen = enableRelativeProgress && !isTitle
         val words = if (shouldGen) {
             wordBuilder.build(source, source.text, source.words)
         } else source.words
