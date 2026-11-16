@@ -1,23 +1,15 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><!-- Created with Inkscape (http://www.inkscape.org/) -->
 
-<svg width="240" height="240" viewBox="0 0 240 240" version="1.1" id="svg1" xmlns="http://www.w3.org/2000/svg">
-  <defs
-     id="defs1" />
-  <g
-     id="layer1">
-    <rect
-       style="fill:#3582ff;stroke-width:4.7811;paint-order:stroke fill markers"
-       id="rect1"
-       width="240"
-       height="240"
-       x="0"
-       y="0"
-       rx="50" />
-    <path
-       d="M 115.92,156.28 H 97.76 v -10.4 h 7.92 V 95.4 H 69.36 v -9.84 h 46.56 z M 42.8,107.08 h 19.12 v 33.68 l 7.52,-2.56 v 11.92 l -18.24,6.16 v -38.56 h -8.4 z m 16.4,-22.8 5.52,17.36 H 53.84 L 48.32,84.28 Z m 11.04,16.88 h 31.36 v 9.12 H 70.24 Z m 0.88,14.96 h 26.8 v 27.84 h -26.8 z m 17.36,18.56 v -9.28 h -7.92 v 9.28 z M 140.4,97.88 V 94.84 H 125.2 V 86.2 h 15.2 v -2.88 h 10.4 v 2.88 h 18.4 v -2.88 h 10.4 v 2.88 h 15.2 v 8.64 h -15.2 v 3.04 h 10.56 v 23.2 H 165.2 v 2.96 h 31.12 v 8.88 h -8.96 c 2.29333,3.14667 5.57333,5.54667 9.84,7.2 v 10.08 c -4.64,-1.65333 -8.61333,-3.81333 -11.92,-6.48 v 11.6 H 175.2 v -8.64 h -10.08 v 10 h -10.24 v -10 H 144.8 v 8.64 h -10.08 v -11.6 c -3.30667,2.66667 -7.28,4.82667 -11.92,6.48 v -10.08 c 4.26667,-1.65333 7.54667,-4.05333 9.84,-7.2 h -8.96 v -8.88 h 31.12 v -2.96 h -24.96 v -23.2 z m 14.48,40.4 v -4.16 h 10.24 v 4.16 h 14.96 c -1.22667,-1.70667 -2.26667,-3.49333 -3.12,-5.36 h -33.92 c -0.85333,1.86667 -1.89333,3.65333 -3.12,5.36 z m 24.88,-23.6 v -2.32 h -39.52 v 2.32 z m 0,-8.16 v -2.4 h -39.52 v 2.4 z M 169.2,97.88 v -3.04 h -18.4 v 3.04 z"
-       id="text1"
-       style="font-size:80px;font-family:'Alimama ShuHeiTi';-inkscape-font-specification:'Alimama ShuHeiTi, Normal';fill:#ffffff;stroke-width:4.7811;paint-order:stroke fill markers"
-       aria-label="词幕" />
-  </g>
+<svg width="240" height="240" viewBox="0 0 240 240" version="1.1" id="svg1"
+    xmlns="http://www.w3.org/2000/svg">
+    <defs id="defs1" />
+    <g id="layer1">
+        <rect style="fill:#3582ff;stroke-width:4.7811;paint-order:stroke fill markers" id="rect1"
+            width="240" height="240" x="0" y="0" rx="50" />
+        <path
+            d="M 115.92,156.28 H 97.76 v -10.4 h 7.92 V 95.4 H 69.36 v -9.84 h 46.56 z M 42.8,107.08 h 19.12 v 33.68 l 7.52,-2.56 v 11.92 l -18.24,6.16 v -38.56 h -8.4 z m 16.4,-22.8 5.52,17.36 H 53.84 L 48.32,84.28 Z m 11.04,16.88 h 31.36 v 9.12 H 70.24 Z m 0.88,14.96 h 26.8 v 27.84 h -26.8 z m 17.36,18.56 v -9.28 h -7.92 v 9.28 z M 140.4,97.88 V 94.84 H 125.2 V 86.2 h 15.2 v -2.88 h 10.4 v 2.88 h 18.4 v -2.88 h 10.4 v 2.88 h 15.2 v 8.64 h -15.2 v 3.04 h 10.56 v 23.2 H 165.2 v 2.96 h 31.12 v 8.88 h -8.96 c 2.29333,3.14667 5.57333,5.54667 9.84,7.2 v 10.08 c -4.64,-1.65333 -8.61333,-3.81333 -11.92,-6.48 v 11.6 H 175.2 v -8.64 h -10.08 v 10 h -10.24 v -10 H 144.8 v 8.64 h -10.08 v -11.6 c -3.30667,2.66667 -7.28,4.82667 -11.92,6.48 v -10.08 c 4.26667,-1.65333 7.54667,-4.05333 9.84,-7.2 h -8.96 v -8.88 h 31.12 v -2.96 h -24.96 v -23.2 z m 14.48,40.4 v -4.16 h 10.24 v 4.16 h 14.96 c -1.22667,-1.70667 -2.26667,-3.49333 -3.12,-5.36 h -33.92 c -0.85333,1.86667 -1.89333,3.65333 -3.12,5.36 z m 24.88,-23.6 v -2.32 h -39.52 v 2.32 z m 0,-8.16 v -2.4 h -39.52 v 2.4 z M 169.2,97.88 v -3.04 h -18.4 v 3.04 z"
+            id="text1"
+            style="font-size:80px;font-family:'Alimama ShuHeiTi';-inkscape-font-specification:'Alimama ShuHeiTi, Normal';fill:#ffffff;stroke-width:4.7811;paint-order:stroke fill markers"
+            aria-label="词幕" />
+    </g>
 </svg>

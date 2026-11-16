@@ -36,7 +36,7 @@ fun File.md5(): String {
         }
         digest.digest().joinToString("") { "%02x".format(it) }
     } catch (e: Exception) {
-        e.printStackTrace()
+        android.util.Log.e("FileExt", "md5: Failed to calculate hash", e)
         ""
     }
 }
@@ -68,7 +68,8 @@ fun File.md5Nio(): String {
         val digest = MessageDigest.getInstance("MD5")
         Files.newInputStream(toPath()).use { fis ->
             Channels.newChannel(fis).use { channel ->
-                val buffer = ByteBuffer.allocateDirect(8192)
+                // 使用堆内存替代直接内存，对小文件更高效
+                val buffer = ByteBuffer.allocate(8192)
                 while (channel.read(buffer) != -1) {
                     buffer.flip()
                     digest.update(buffer)
@@ -78,7 +79,7 @@ fun File.md5Nio(): String {
         }
         digest.digest().joinToString("") { "%02x".format(it) }
     } catch (e: Exception) {
-        e.printStackTrace()
+        android.util.Log.e("FileExt", "md5Nio: Failed to calculate hash", e)
         ""
     }
 }

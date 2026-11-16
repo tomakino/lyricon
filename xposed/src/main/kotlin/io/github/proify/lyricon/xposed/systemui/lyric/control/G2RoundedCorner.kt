@@ -54,7 +54,7 @@ object G2RoundedCorner {
                     return
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    outline.setConvexPath(roundRectPath(w, h, radius))
+                    outline.setPath(roundRectPath(w, h, radius))
                 } else {
                     outline.setRoundRect(0, 0, w, h, radius)
                 }

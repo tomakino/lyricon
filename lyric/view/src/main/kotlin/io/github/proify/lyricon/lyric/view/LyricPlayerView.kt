@@ -243,13 +243,26 @@ open class LyricPlayerView(
                 val speed = AnimSpeed.fromPref(style.animation.speed)
                 val preset by lazy { YoYoPresets.getById(style.animation.presetId, speed) }
                 if (style.animation.enabled && preset != null) {
+                    // 检查是否是标题行过渡
+                    val isTitleTransition = recycle.line?.isTitleLine() == true
+                    
+                    // 重置动画状态
+                    recycle.resetAnimationState()
                     activeLines[0] = newLine
-                    recycle.beginAnimationTransition()
-                    recycle.line = newLine
-                    animateUpdate(preset!!) {
-                        recycle.endAnimationTransition()
+                    
+                    // 如果是标题行过渡，先更新内容再执行动画
+                    if (isTitleTransition) {
+                        recycle.line = newLine
                         recycle.requestStartMarquee()
                         updateViewsVisibility()
+                    } else {
+                        recycle.beginAnimationTransition()
+                        recycle.line = newLine
+                        animateUpdate(preset!!) {
+                            recycle.endAnimationTransition()
+                            recycle.requestStartMarquee()
+                            updateViewsVisibility()
+                        }
                     }
                 } else {
                     activeLines[0] = newLine

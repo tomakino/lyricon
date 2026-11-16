@@ -28,6 +28,7 @@
             <option value="$PROJECT_DIR$/lyricon" />
             <option value="$PROJECT_DIR$/opencc-lite" />
             <option value="$PROJECT_DIR$/xposed" />
+            <option value="$PROJECT_DIR$/yoyo" />
           </set>
         </option>
       </GradleProjectSettings>

@@ -52,11 +52,9 @@ configure<LibraryExtension> {
 }
 
 dependencies {
-    //noinspection UseTomlInstead
-    implementation("com.daimajia.androidanimations:library:2.4@aar")
-    implementation("com.daimajia.easing:library:2.4@aar")
-
+    implementation(project(":yoyo"))
     implementation(project(":lyric:model"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.interpolator)
     testImplementation(libs.junit)

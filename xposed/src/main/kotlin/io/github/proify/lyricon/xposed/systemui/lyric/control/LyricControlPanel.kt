@@ -23,6 +23,8 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -34,6 +36,7 @@ import io.github.proify.android.extensions.dp
 import io.github.proify.android.extensions.sp
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.xposed.BuildConfig
+import io.github.proify.lyricon.xposed.logger.YLog
 import io.github.proify.lyricon.xposed.systemui.lyric.control.LyricControlPanel.Companion.NO_SEEK_TARGET
 import io.github.proify.lyricon.xposed.systemui.util.MediaTrackMeta
 import kotlin.math.abs
@@ -62,9 +65,21 @@ class LyricControlPanel(context: Context) : FrameLayout(context) {
         fun onNext()
         fun onSeekTo(position: Long)
         fun onAiExplain(button: View)
+
+        /** 点击卡片进入音乐软件 */
+        fun onOpenApp()
     }
 
     var actionListener: ActionListener? = null
+
+    /** 封面翻转动画进行中，防止动画重叠 */
+    private var isFlipping = false
+
+    /** 是否是首次设置封面（首次设置不播放动画） */
+    private var isFirstCover = true
+
+    /** 上一次封面的文件最后修改时间，用于判断封面是否变化 */
+    private var lastCoverModified: Long = 0L
 
     // ---- 视图（在 init 中创建并组装） ----
     private val card: LinearLayout
@@ -120,15 +135,47 @@ class LyricControlPanel(context: Context) : FrameLayout(context) {
     /** 刚体锁定的最长持续时间（毫秒时间戳），超时兜底恢复外部刷新。 */
     private var seekLockExpireAt: Long = 0L
 
+    /**
+     * 当前卡片背景：优先使用实时模糊 Drawable，设备不支持时降级为纯色 GradientDrawable。
+     * 用于 [setBackdropColor] 更新叠加色时判断背景类型。
+     */
+    private var blurBackground: Drawable? = null
+
+    /** 当前使用的封面主色（用于重新打开 popup 时恢复） */
+    private var currentCoverColor: Int = Color.TRANSPARENT
+
+    /**
+     * 设置模糊背景的透明度 (0~255)。
+     *
+     * BackgroundBlurDrawable 是系统内部 drawable，不响应 View 的 alpha 变化，
+     * 需要在动画过程中手动调用此方法更新透明度。
+     */
+    fun setBlurAlpha(alpha: Int) {
+        blurBackground?.let {
+            try {
+                it.alpha = alpha.coerceIn(0, 255)
+            } catch (e: Exception) {
+                // 部分设备可能不支持动态修改 alpha
+                YLog.debug(TAG, "setBlurAlpha failed: ${e.message}")
+            }
+        }
+    }
+
 
     init {
+        YLog.debug(TAG, "Initializing LyricControlPanel")
 
         card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(CARD_PADDING_DP.dp)
             clipToOutline = true
             outlineProvider = G2RoundedCorner.outlineProvider(CARD_RADIUS_DP.dp.toFloat())
+            // 先使用纯色背景，延迟到 onAttachedToWindow 中创建模糊效果
             background = ControlUi.roundedDrawable(CARD_COLOR, CARD_RADIUS_DP.dp.toFloat())
+            // 点击卡片进入音乐软件
+            setOnClickListener {
+                actionListener?.onOpenApp()
+            }
         }
 
         coverView = ImageView(context).apply {
@@ -144,7 +191,7 @@ class LyricControlPanel(context: Context) : FrameLayout(context) {
         titleView = MarqueeTitleView(context).apply {
             textSize = TITLE_TEXT_SIZE_SP.sp
             textColor = TEXT_COLOR_PRIMARY
-            textTypeface = Typeface.create(Typeface.DEFAULT,500,false)
+            textTypeface = Typeface.create(Typeface.DEFAULT, 500, false)
             // 单行、滚动与渐隐参数均由 MarqueeTitleView 内部管理
         }
 
@@ -265,7 +312,52 @@ class LyricControlPanel(context: Context) : FrameLayout(context) {
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        // View 已附加到窗口，此时可以安全获取 ViewRootImpl
+        YLog.debug(TAG, "onAttachedToWindow: View attached, attempting to create blur background")
+        initBlurBackground()
+    }
 
+    /**
+     * 初始化模糊背景（在 View 附加到窗口后调用）。
+     *
+     * 此时 ViewRootImpl 已可用，可以创建 BackgroundBlurDrawable。
+     * 若设备不支持或创建失败，保持当前纯色背景不变。
+     */
+    private fun initBlurBackground() {
+        val existingBlur = blurBackground
+        if (existingBlur != null) {
+            YLog.debug(TAG, "initBlurBackground: blur already initialized, skip")
+            return
+        }
+
+        // 使用保存的封面主色（如果有），否则使用默认的深黑色
+        val baseColor =
+            if (currentCoverColor != Color.TRANSPARENT) currentCoverColor else CARD_COLOR
+        val initialColor = applyOverlayAlpha(baseColor, OVERLAY_ALPHA)
+        val alphaPercent = (OVERLAY_ALPHA * 100).toInt()
+        YLog.debug(
+            TAG,
+            "initBlurBackground: creating blur, radius=$BLUR_RADIUS_PX, alpha=${OVERLAY_ALPHA}f ($alphaPercent%), color=#${
+                Integer.toHexString(initialColor)
+            }"
+        )
+
+        blurBackground = ControlUi.createBackgroundBlur(
+            view = this,
+            blurRadius = BLUR_RADIUS_PX,
+            cornerRadius = CARD_RADIUS_DP.dp.toFloat(),
+            overlayColor = initialColor
+        )
+        val isBlurMode = blurBackground != null
+        if (isBlurMode) {
+            card.background = blurBackground
+            YLog.info(
+                TAG,
+                "✅ initBlurBackground: blur ENABLED, radius=${BLUR_RADIUS_PX}px, alpha=${OVERLAY_ALPHA}f ($alphaPercent%)"
+            )
+        } else {
+            YLog.warning(TAG, "❌ initBlurBackground: blur NOT available")
+        }
     }
 
     /**
@@ -460,7 +552,18 @@ class LyricControlPanel(context: Context) : FrameLayout(context) {
     fun updatePosition(position: Long) {
         if (isSeeking) return
         if (isSeekLocked(position)) return
-        seekBar.progress = positionToProgress(position)
+
+        val targetProgress = positionToProgress(position)
+        val currentProgress = seekBar.progress
+        val progressDiff = abs(targetProgress - currentProgress)
+
+        // 判断是否需要动画：
+        // 1. 切歌重置到 0（当前进度 > 0 且目标进度 = 0）
+        // 2. 进度跳跃太大（差值超过阈值）
+        val shouldAnimate = (currentProgress > 0 && targetProgress == 0) ||
+                progressDiff > SEEK_ANIMATION_THRESHOLD
+
+        seekBar.setProgress(targetProgress, shouldAnimate)
         setTextIfChanged(currentTimeView, formatTime(position))
     }
 
@@ -484,19 +587,138 @@ class LyricControlPanel(context: Context) : FrameLayout(context) {
         return true
     }
 
-    /** 刷新播放/暂停图标。 */
+    /** 刷新播放/暂停图标，并更新封面动画状态。 */
     fun setPlaying(playing: Boolean) {
         playButton.setImageDrawable(playPauseIcon(playing))
+
+        // 暂停时封面微微缩小，播放时恢复
+        if (playing) {
+            coverView.animate()
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(200)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        } else {
+            coverView.animate()
+                .scaleX(PAUSE_COVER_SCALE)
+                .scaleY(PAUSE_COVER_SCALE)
+                .setDuration(200)
+                .setInterpolator(AccelerateInterpolator())
+                .start()
+        }
     }
 
-    /** 设置封面图片。 */
-    fun setCover(bitmap: Bitmap) {
-        coverView.setImageBitmap(bitmap)
+    /**
+     * 设置封面图片，带 3D 翻转动画效果。
+     *
+     * - 首次设置封面：直接显示，不播放动画
+     * - 封面未变化（文件最后修改时间相同）：直接显示，不播放动画
+     * - 封面变化：播放 3D 翻转动画
+     *
+     * @param bitmap 封面图片
+     * @param coverModified 封面文件最后修改时间，用于判断封面是否变化
+     */
+    fun setCover(bitmap: Bitmap, coverModified: Long = 0L) {
+        if (isFlipping) return  // 防止动画重叠
+
+        // 首次设置封面或封面未变化，直接显示，不播放动画
+        if (isFirstCover || coverModified == lastCoverModified) {
+            coverView.setImageBitmap(bitmap)
+            isFirstCover = false
+            lastCoverModified = coverModified
+            return
+        }
+
+        // 封面变化，播放 3D 翻转动画
+        isFlipping = true
+        lastCoverModified = coverModified
+        val duration = 300L
+
+        // 启用硬件加速以获得更好的 3D 渲染性能
+        coverView.setLayerType(LAYER_TYPE_HARDWARE, null)
+
+        // 阶段1：绕 Y 轴旋转到 90°（旧封面消失）+ 缩小 + 淡出
+        coverView.animate()
+            .rotationY(90f)
+            .scaleX(0.85f)
+            .scaleY(0.85f)
+            .alpha(0.5f)
+            .setDuration(duration / 2)
+            .setInterpolator(AccelerateInterpolator())
+            .withEndAction {
+                // 切换图片
+                coverView.setImageBitmap(bitmap)
+
+                // 从 -90° 开始旋转到 0°（新封面出现）
+                coverView.rotationY = -90f
+                coverView.animate()
+                    .rotationY(0f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .alpha(1f)
+                    .setDuration(duration / 2)
+                    .setInterpolator(DecelerateInterpolator())
+                    .withEndAction {
+                        isFlipping = false
+                        // 关闭硬件加速以节省内存
+                        coverView.setLayerType(LAYER_TYPE_NONE, null)
+                    }
+                    .start()
+            }
+            .start()
     }
 
-    /** 用封面主色的暗化色刷新卡片背景。 */
+    /**
+     * 用封面主色刷新卡片背景叠加色。
+     *
+     * 若当前使用实时模糊背景，则将封面主色设置为叠加色（保持通透）；
+     * 否则替换为新的纯色 GradientDrawable（降级路径）。
+     */
     fun setBackdropColor(color: Int) {
-        card.background = ControlUi.roundedDrawable(color, CARD_RADIUS_DP.dp.toFloat())
+        currentCoverColor = color  // 保存封面主色，用于重新打开时恢复
+        val blur = blurBackground
+        val alphaPercent = (OVERLAY_ALPHA * 100).toInt()
+        YLog.debug(
+            TAG,
+            "setBackdropColor: blurBackground=${if (blur != null) "exists" else "null"}, color=#${
+                Integer.toHexString(color)
+            }"
+        )
+        if (blur != null) {
+            // 实时模糊模式：使用封面主色 + 低 alpha 保持通透感
+            val colorWithAlpha = applyOverlayAlpha(color, OVERLAY_ALPHA)
+            YLog.debug(
+                TAG,
+                "setBackdropColor: blur overlay=#${Integer.toHexString(colorWithAlpha)} (alpha=${OVERLAY_ALPHA}f/$alphaPercent%, original=#${
+                    Integer.toHexString(color)
+                })"
+            )
+            ControlUi.updateBlurOverlayColor(blur, colorWithAlpha)
+            // 强制刷新视图，确保 BlurDrawable 立即渲染
+            card.invalidate()
+            card.postInvalidateOnAnimation()
+        } else {
+            // 降级模式：使用封面色 + 深色混合，确保深色效果
+            val fallbackColor = applyOverlayAlpha(color, OVERLAY_ALPHA)
+            YLog.debug(
+                TAG,
+                "setBackdropColor: fallback solid=#${Integer.toHexString(fallbackColor)}"
+            )
+            card.background = ControlUi.roundedDrawable(fallbackColor, CARD_RADIUS_DP.dp.toFloat())
+        }
+    }
+
+    /**
+     * 为颜色应用叠加透明度，保持 RGB 不变。
+     *
+     * @param color 原始颜色（ARGB）
+     * @param alpha 不透明度 (0.0~1.0)，如 0.31 表示 31% 不透明
+     * @return 应用 alpha 后的颜色
+     */
+    private fun applyOverlayAlpha(color: Int, alpha: Float): Int {
+        val alphaInt = (alpha.coerceIn(0f, 1f) * 255).toInt()
+        return (alphaInt shl 24) or (color and 0x00FFFFFF)
     }
 
     /**
@@ -654,10 +876,18 @@ class LyricControlPanel(context: Context) : FrameLayout(context) {
     // -------------------------------------------------------------------------
 
     private companion object {
+        private const val TAG = "LyricControlPanel"
+
         const val CARD_RADIUS_DP = 28
         const val COVER_RADIUS_DP = 16
         const val COVER_SIZE_DP = 72
         const val CARD_PADDING_DP = 16
+
+        /** 背景模糊半径（像素），600 为最强磨砂效果。 */
+        const val BLUR_RADIUS_PX = 600
+
+        /** 模糊叠加色的不透明度 (0.0~1.0)，0.8 表示 80% 不透明，纯封面主色 */
+        const val OVERLAY_ALPHA = 0.8f
 
         const val INFO_ROW_BOTTOM_PADDING_DP = 10
         const val TITLE_COLUMN_LEFT_PADDING_DP = 10
@@ -666,6 +896,12 @@ class LyricControlPanel(context: Context) : FrameLayout(context) {
         const val ACTION_ROW_TOP_PADDING_DP = 0
         const val ACTION_BUTTON_SIZE_DP = 36
         const val SEEK_MAX = 1000
+
+        /** 进度动画阈值：进度差超过此值时使用动画过渡（约 5% 进度） */
+        const val SEEK_ANIMATION_THRESHOLD = 50
+
+        /** 暂停时封面缩放比例（微微缩小） */
+        const val PAUSE_COVER_SCALE = 0.92f
 
         /** 长圆（胶囊）进度轨道高度（dp）。 */
         const val LONG_ROUNDED_TRACK_HEIGHT_DP = 5
@@ -684,7 +920,9 @@ class LyricControlPanel(context: Context) : FrameLayout(context) {
         const val TIME_TEXT_SIZE_SP = 11f
 
         const val TITLE_WHEN_NO_SONG = "未在播放"
-        val CARD_COLOR = Color.argb(244, 28, 32, 46)
+
+        /** 卡片背景色 RGB：深蓝灰色 (28, 32, 46)，不透明度由 OVERLAY_ALPHA 控制 */
+        val CARD_COLOR = Color.argb(OVERLAY_ALPHA, 28f, 32f, 46f)
         val COVER_PLACEHOLDER_COLOR = Color.argb(70, 255, 255, 255)
         const val TEXT_COLOR_PRIMARY = Color.WHITE
         val TEXT_COLOR_SECONDARY = Color.argb(170, 255, 255, 255)
@@ -692,7 +930,7 @@ class LyricControlPanel(context: Context) : FrameLayout(context) {
 
         // ---- 卡片触摸效果 ----
         const val TOUCH_PRESS_SCALE = 0.97f
-        const val TOUCH_PRESS_DOWN_MS = 60L
+        const val TOUCH_PRESS_DOWN_MS = 200L
         const val TOUCH_PRESS_UP_MS = 200L
         const val TOUCH_DIR_THRESHOLD_DP = 8
         const val TOUCH_MAX_DP = 30

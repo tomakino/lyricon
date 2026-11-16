@@ -54,6 +54,8 @@ dependencies {
     implementation(project(":lyric:style"))
     implementation(project(":lyric:view"))
     implementation(project(":lyric:ai"))
+    implementation(project(":lyric:model"))
+    implementation(project(":lyric:bridge:subscriber"))
 
     // --- 第三方 UI 库 ---
     implementation(libs.miuix.android)

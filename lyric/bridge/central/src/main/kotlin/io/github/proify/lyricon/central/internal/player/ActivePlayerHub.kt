@@ -32,8 +32,6 @@ internal class ActivePlayerHub : PlayerListener {
     private val listeners = CopyOnWriteArraySet<ActivePlayerListener>()
     private val selector = ActivePlayerSelector()
 
-    private val activeInfo: ProviderInfo? get() = selector.activeSession?.providerInfo
-
     /**
      * 添加监听器；若已存在活跃播放器，立即同步一份完整状态快照。
      *

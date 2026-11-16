@@ -9,6 +9,7 @@ package io.github.proify.lyricon.xposed.systemui.lyric.control
 import android.annotation.SuppressLint
 import android.media.MediaMetadata
 import android.media.session.MediaController
+import android.opengl.GLSurfaceView
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
@@ -49,7 +50,8 @@ import java.io.File
  */
 @SuppressLint("StaticFieldLeak")
 @Suppress("unused")
-object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCoverUpdateListener {
+object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCoverUpdateListener,
+    NotificationCoverHelper.OnCoverColorListener {
 
     private const val TAG = "LyricControlPopup"
     private const val UPDATE_INTERVAL_MS = 200L
@@ -57,6 +59,7 @@ object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCover
     private const val SCREEN_MARGIN_DP = 16
     private const val SCREEN_VERTICAL_GAP_DP = 4
     private const val MIN_WIDTH_DP = 280
+    private const val MAX_WIDTH_DP = 480
     private const val ELEVATION_DP = 28
 
     /** 拖动：自由移动区间（相对锚点），超出后施加阻尼。 */
@@ -104,6 +107,25 @@ object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCover
             val anchor = anchorView ?: return
             AiExplainLauncher.launch(anchor, button, LyricViewController.currentSong)
             dismiss()
+        }
+
+        override fun onOpenApp() {
+
+            val pkg = LyricViewController.activePackage
+            if (pkg.isBlank()) return
+            val anchor = anchorView ?: return
+
+            try {
+                val intent = anchor.context.packageManager.getLaunchIntentForPackage(pkg)
+                if (intent != null) {
+                    anchor.context.startActivity(intent)
+                    dismiss()
+                } else {
+                    YLog.warning(TAG, "No launch intent for package: $pkg")
+                }
+            } catch (e: Exception) {
+                YLog.error(TAG, "Failed to launch app: $pkg", e)
+            }
         }
     }
 
@@ -176,6 +198,24 @@ object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCover
     }
 
     // -------------------------------------------------------------------------
+    // NotificationCoverHelper.OnCoverColorListener：封面颜色提取后立即回调
+    // -------------------------------------------------------------------------
+
+    /**
+     * 封面颜色提取后立即回调（主线程），无需等待文件写入完成。
+     * 用于快速更新卡片背景色，避免切歌时颜色更新延迟。
+     */
+    override fun onCoverColorChanged(packageName: String, color: Int) {
+        if (packageName != LyricViewController.activePackage) return
+        val startTime = System.nanoTime()
+        runOnMainThread {
+            panel?.setBackdropColor(color)
+            val elapsed = (System.nanoTime() - startTime) / 1_000_000.0
+            YLog.debug(TAG, "onCoverColorChanged: color=#${Integer.toHexString(color)}, setBackdropColor=${elapsed}ms")
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // 公开 API
     // -------------------------------------------------------------------------
 
@@ -199,7 +239,7 @@ object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCover
         val dm = context.resources.displayMetrics
         val screenWidth = dm.widthPixels
         val margin = SCREEN_MARGIN_DP.dp
-        val popupWidth = (screenWidth - margin * 2).coerceAtLeast(MIN_WIDTH_DP.dp)
+        val popupWidth = (screenWidth - margin * 2).coerceIn(MIN_WIDTH_DP.dp, MAX_WIDTH_DP.dp)
 
         val panel = LyricControlPanel(context).apply {
             actionListener = this@LyricControlPopup.actionListener
@@ -222,7 +262,8 @@ object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCover
             isTouchModal = false
             isOutsideTouchable = true
             elevation = ELEVATION_DP.dp.toFloat()
-            setBackgroundDrawable(null /* 透明，由卡片负责圆角与阴影 */)
+            // 设置半透明背景，让模糊效果可见（BackgroundBlurDrawable 需要窗口半透明）
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
             // 禁用裁剪：允许卡片 overscroll 时 translationY 超出窗口边界
             isClippingEnabled = false
             // 外部触摸：先播放收走动画再关窗；返回 true 拦截默认的瞬间擦除
@@ -263,6 +304,7 @@ object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCover
             LyricDataHub.addListener(this)
             SystemUIMediaUtils.registerListener(mediaCallback)
             NotificationCoverHelper.registerListener(this)
+            NotificationCoverHelper.registerColorListener(this)  // 注册颜色监听，快速更新背景色
             mainHandler.removeCallbacks(positionUpdater)
             mainHandler.post(positionUpdater)
         } catch (e: Exception) {
@@ -290,7 +332,14 @@ object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCover
         mainHandler.removeCallbacks(positionUpdater)
         if (window.isShowing) {
             if (root != null) {
-                ControlAnimations.playExit(root) { window.dismiss() }
+                ControlAnimations.playExit(
+                    view = root,
+                    onEnd = { window.dismiss() },
+                    onUpdateAlpha = { alpha ->
+                        // 同步更新模糊背景的透明度 (0.0~1.0 → 0~255)
+                        root.setBlurAlpha((alpha * 255).toInt())
+                    }
+                )
             } else {
                 window.dismiss()
             }
@@ -337,7 +386,7 @@ object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCover
         try {
             val bitmap = CoverBackdrop.decode(file) ?: return
             panel?.apply {
-                setCover(bitmap)
+                setCover(bitmap, file.lastModified())
                 setBackdropColor(CoverBackdrop.backdropColor(bitmap))
             }
         } catch (e: Exception) {
@@ -369,6 +418,7 @@ object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCover
         mainHandler.removeCallbacks(positionUpdater)
         SystemUIMediaUtils.unregisterListener(mediaCallback)
         NotificationCoverHelper.unregisterListener(this)
+        NotificationCoverHelper.unregisterColorListener(this)  // 取消注册颜色监听
         dismissing = false
         popup = null
         panel = null

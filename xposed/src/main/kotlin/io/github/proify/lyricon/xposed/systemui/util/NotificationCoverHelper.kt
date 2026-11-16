@@ -16,6 +16,7 @@ import androidx.core.graphics.scale
 import io.github.proify.android.extensions.md5
 import io.github.proify.android.extensions.saveTo
 import io.github.proify.lyricon.xposed.systemui.Directory
+import io.github.proify.lyricon.xposed.systemui.lyric.control.CoverBackdrop
 import io.github.proify.lyricon.xposed.systemui.util.NotificationCoverHelper.MAX_COVER_SIZE
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -64,6 +65,9 @@ object NotificationCoverHelper {
     /** 封面更新监听器集合，线程安全 */
     private val updateListeners = CopyOnWriteArraySet<OnCoverUpdateListener>()
 
+    /** 封面颜色监听器集合，线程安全 */
+    private val colorListeners = CopyOnWriteArraySet<OnCoverColorListener>()
+
     /** 标记是否已完成初始化 */
     private val initialized = AtomicBoolean(false)
 
@@ -87,6 +91,17 @@ object NotificationCoverHelper {
      * 取消注册封面更新监听器。
      */
     fun unregisterListener(listener: OnCoverUpdateListener) = updateListeners.remove(listener)
+
+    /**
+     * 注册封面颜色监听器。
+     * 当封面 Bitmap 提取后立即回调，无需等待文件写入完成。
+     */
+    fun registerColorListener(listener: OnCoverColorListener) = colorListeners.add(listener)
+
+    /**
+     * 取消注册封面颜色监听器。
+     */
+    fun unregisterColorListener(listener: OnCoverColorListener) = colorListeners.remove(listener)
 
     /**
      * 初始化 Helper，开始监听系统媒体控制器变化。
@@ -172,6 +187,13 @@ object NotificationCoverHelper {
     }
 
     /**
+     * 通知所有已注册的颜色监听器封面颜色已提取。
+     */
+    private fun notifyColorListeners(packageName: String, color: Int) {
+        colorListeners.forEach { it.onCoverColorChanged(packageName, color) }
+    }
+
+    /**
      * 根据歌曲标题和艺术家生成封面缓存文件名。
      * 使用 MD5 避免特殊字符导致的文件系统兼容问题。
      */
@@ -209,6 +231,7 @@ object NotificationCoverHelper {
          * 运行在主线程。
          */
         fun onMetadataChanged(metadata: MediaMetadata) {
+            val startTime = System.nanoTime()
             val originalCover = extractBitmap(metadata) ?: return
             val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
             val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
@@ -221,7 +244,22 @@ object NotificationCoverHelper {
             if (lastCoverId == coverId) return
 
             // 必须在主线程立即克隆并缩放，因为 originalCover 可能随时被系统回收
+            val cloneStart = System.nanoTime()
             val scaledCover = cloneAndScaleCover(originalCover) ?: return
+            val cloneTime = (System.nanoTime() - cloneStart) / 1_000_000.0
+
+            // 立即提取颜色并通知监听器（不等文件写入）
+            try {
+                val colorStart = System.nanoTime()
+                val color = CoverBackdrop.backdropColor(scaledCover)
+                val colorTime = (System.nanoTime() - colorStart) / 1_000_000.0
+
+                notifyColorListeners(packageName, color)
+                val totalTime = (System.nanoTime() - startTime) / 1_000_000.0
+                Log.d(TAG, "[$packageName] onMetadataChanged: clone=${cloneTime}ms, color=${colorTime}ms, total=${totalTime}ms, color=#${Integer.toHexString(color)}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to extract cover color for $packageName", e)
+            }
 
             // 将文件写入操作分发到协程中异步执行
             scope.launch {
@@ -385,5 +423,16 @@ object NotificationCoverHelper {
          * @param coverFile   最新的封面文件
          */
         fun onCoverUpdated(packageName: String, coverFile: File)
+    }
+
+    /**
+     * 封面颜色监听器：在封面 Bitmap 提取后立即回调，无需等待文件写入完成。
+     */
+    fun interface OnCoverColorListener {
+        /**
+         * @param packageName 发生封面更新的应用包名
+         * @param color 封面主色 (ARGB)
+         */
+        fun onCoverColorChanged(packageName: String, color: Int)
     }
 }

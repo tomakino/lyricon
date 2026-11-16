@@ -16,6 +16,7 @@ import android.widget.TextView
 import androidx.core.graphics.toColorInt
 import androidx.core.view.doOnAttach
 import androidx.core.view.isVisible
+import io.github.proify.android.extensions.crc32
 import io.github.proify.android.extensions.dp
 import io.github.proify.android.extensions.isLandScape
 import io.github.proify.android.extensions.setColorAlpha
@@ -28,6 +29,7 @@ import io.github.proify.lyricon.common.util.ScreenStateMonitor
 import io.github.proify.lyricon.lyric.style.BasicStyle
 import io.github.proify.lyricon.lyric.style.LyricStyle
 import io.github.proify.lyricon.statusbarlyric.StatusBarLyric
+import io.github.proify.lyricon.statusbarlyric.gesture.GestureType
 import io.github.proify.lyricon.xposed.logger.YLog
 import io.github.proify.lyricon.xposed.systemui.hook.ClockViewFinder
 import io.github.proify.lyricon.xposed.systemui.hook.OplusCapsuleHooker
@@ -132,45 +134,48 @@ class StatusBarViewController(
         this.systemStatusBarColor = systemStatusBarColor
 
         val textStyle = currentLyricStyle.packageStyle.text
-        lyricView.apply {
-            currentStatusColor.apply {
-                this.darkIntensity = systemStatusBarColor.darkIntensity
+        val paletteResult = coverColorPaletteResult
 
-                val coverColorPaletteResult = coverColorPaletteResult
-                when {
-                    coverColorPaletteResult != null
-                            && textStyle.enableExtractCoverTextColor
-                            && textStyle.enableExtractCoverTextGradient -> {
-                        val themeColors = coverColorPaletteResult
-                            .let { if (isLightMode) it.lightModeColors else it.darkModeColors }
+        // 配色写入收敛到视图侧的单一入口：这里只负责决定"用什么颜色"
+        lyricView.updateStatusColor {
+            darkIntensity = systemStatusBarColor.darkIntensity
 
-                        val gradient = themeColors.swatches
-
-                        this.color = gradient
-                        this.translucentColor = gradient.map {
-                            it.setColorAlpha(0.75f)
-                        }.toIntArray()
+            when {
+                paletteResult != null
+                        && textStyle.enableExtractCoverTextColor
+                        && textStyle.enableExtractCoverTextGradient -> {
+                    val themeColors = if (isLightMode) {
+                        paletteResult.lightModeColors
+                    } else {
+                        paletteResult.darkModeColors
                     }
+                    val gradient = themeColors.swatches
 
-                    coverColorPaletteResult != null
-                            && textStyle.enableExtractCoverTextColor -> {
-                        val themeColors = coverColorPaletteResult
-                            .let { if (isLightMode) it.lightModeColors else it.darkModeColors }
+                    color = gradient
+                    translucentColor = gradient.map {
+                        it.setColorAlpha(0.75f)
+                    }.toIntArray()
+                }
 
-                        val primary = themeColors.primary
-
-                        this.color = intArrayOf(primary)
-                        this.translucentColor = intArrayOf(primary.setColorAlpha(0.75f))
+                paletteResult != null
+                        && textStyle.enableExtractCoverTextColor -> {
+                    val themeColors = if (isLightMode) {
+                        paletteResult.lightModeColors
+                    } else {
+                        paletteResult.darkModeColors
                     }
+                    val primary = themeColors.primary
 
-                    else -> {
-                        this.color = intArrayOf(systemStatusBarColor.color)
-                        this.translucentColor =
-                            intArrayOf(systemStatusBarColor.color.setColorAlpha(0.5f))
-                    }
+                    color = intArrayOf(primary)
+                    translucentColor = intArrayOf(primary.setColorAlpha(0.75f))
+                }
+
+                else -> {
+                    color = intArrayOf(systemStatusBarColor.color)
+                    translucentColor =
+                        intArrayOf(systemStatusBarColor.color.setColorAlpha(0.5f))
                 }
             }
-            setStatusBarColor(currentStatusColor)
         }
     }
 
@@ -205,7 +210,7 @@ class StatusBarViewController(
             ColorExtractor.extractAsync(
                 bitmap = bitmap,
                 cacheKey = {
-                    coverFile.name
+                    coverFile.crc32().toString()
                 }) {
                 coverColorPaletteResult = it
                 systemStatusBarColor?.let { updateStatusColor(it) }
@@ -275,7 +280,7 @@ class StatusBarViewController(
 
     fun computeShouldApplyPlayingRules(): Boolean {
         return isPlaying && when {
-            lyricView.isDisabledVisible -> !lyricView.isHideOnLockScreen()
+            lyricView.isHiddenByDisabled -> !lyricView.isHideOnLockScreen()
             lyricView.isVisible -> true
             else -> false
         }
@@ -347,14 +352,14 @@ class StatusBarViewController(
     /**
      * 手势回调入口:根据当前配置将手势映射为动作并执行
      */
-    private fun onLyricGesture(gesture: StatusBarLyric.GestureType) {
+    private fun onLyricGesture(gesture: GestureType) {
         if (!gestureEnabled) return
 
         val action = when (gesture) {
-            StatusBarLyric.GestureType.SWIPE_LEFT -> swipeLeftAction
-            StatusBarLyric.GestureType.SWIPE_RIGHT -> swipeRightAction
-            StatusBarLyric.GestureType.TAP -> tapAction
-            StatusBarLyric.GestureType.LONG_PRESS -> longPressAction
+            GestureType.SWIPE_LEFT -> swipeLeftAction
+            GestureType.SWIPE_RIGHT -> swipeRightAction
+            GestureType.TAP -> tapAction
+            GestureType.LONG_PRESS -> longPressAction
         }
 
         when (action) {
@@ -420,7 +425,7 @@ class StatusBarViewController(
     }
 
     fun onDisableStateChanged(shouldHide: Boolean) {
-        lyricView.isDisabledVisible = shouldHide
+        lyricView.isHiddenByDisabled = shouldHide
     }
 
     override fun equals(other: Any?): Boolean =

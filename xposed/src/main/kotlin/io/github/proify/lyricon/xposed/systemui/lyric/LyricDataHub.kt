@@ -119,9 +119,10 @@ object LyricDataHub : ActivePlayerListener {
 
     private var lastDispatchSongId = 0
     private fun dispatchSong(song: Song?) {
-        val normalize = song?.deepCopy()?.normalize()
+        // normalize() 已返回深拷贝且不修改入参，此处无需再 deepCopy()（否则每次分发会复制两份完整歌词对象图）
+        val normalize = song?.normalize()
 
-        val hashCode = normalize?.hashCode() ?: 0
+        val hashCode = normalize.hashCode()
         if (hashCode == lastDispatchSongId) return
         lastDispatchSongId = hashCode
 

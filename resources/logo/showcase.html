@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8">
+<title>词幕 Lyricon · 符号图标</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px;background:#F4F7FB;color:#1B2537;
+       font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  h1{font-size:18px;font-weight:650;margin:0 0 4px}
+  p.sub{margin:0 0 22px;color:#68758C;font-size:12.5px}
+  h2.sec{font-size:12.5px;font-weight:600;color:#7A879C;margin:22px 0 10px;letter-spacing:.4px}
+  .panel{background:#fff;border:1px solid #E3EAF3;border-radius:16px;padding:22px}
+  .cols{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:9px}
+  .cell span{font-size:10.5px;color:#8B98AC}
+  .ink{width:128px;height:128px;border-radius:13px;display:flex;align-items:center;justify-content:center}
+  .ink.gray{background:#EFF3F9}
+  .ink.dark{background:#0E1420}
+  .ink.brand{background:linear-gradient(135deg,#5AA2FF,#1B54D8)}
+  .ink img{width:90px;height:90px;display:block}
+  .sizes{display:flex;align-items:flex-end;gap:24px}
+  .sizes img{display:block}
+  .tiles{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
+  /* 符号以 currentColor 渲染，<img> 中为黑色，用 filter 近似品牌蓝 / 白 */
+  .blue{filter:brightness(0) saturate(100%) invert(38%) sepia(93%) saturate(2532%) hue-rotate(211deg) brightness(101%) contrast(101%)}
+  .white{filter:brightness(0) invert(1)}
+  .appicon{border-radius:22.5%;display:block}
+</style>
+</head>
+<body>
+  <h1>词幕 Lyricon · 符号图标</h1>
+  <p class="sub">开口环 —— 笔宽 38 的等宽圆环去掉 70° 缺口；单一连通域，12px 下缺口仍可读</p>
+
+  <h2 class="sec">配色</h2>
+  <div class="panel">
+    <div class="cols">
+      <div class="cell"><div class="ink gray"><img src="lyricon-symbol.svg" class="blue" alt=""></div><span>品牌蓝 #3582FF</span></div>
+      <div class="cell"><div class="ink dark"><img src="lyricon-symbol.svg" class="white" alt=""></div><span>白 #FFFFFF</span></div>
+      <div class="cell"><div class="ink brand"><img src="lyricon-symbol.svg" class="white" alt=""></div><span>品牌底反白</span></div>
+    </div>
+  </div>
+
+  <h2 class="sec">尺寸</h2>
+  <div class="panel">
+    <div class="sizes">
+      <div class="cell"><img src="lyricon-symbol.svg" class="blue" style="width:72px;height:72px" alt=""><span>72</span></div>
+      <div class="cell"><img src="lyricon-symbol.svg" class="blue" style="width:48px;height:48px" alt=""><span>48</span></div>
+      <div class="cell"><img src="lyricon-symbol.svg" class="blue" style="width:32px;height:32px" alt=""><span>32</span></div>
+      <div class="cell"><img src="lyricon-symbol.svg" class="blue" style="width:24px;height:24px" alt=""><span>24</span></div>
+      <div class="cell"><img src="lyricon-symbol.svg" class="blue" style="width:16px;height:16px" alt=""><span>16</span></div>
+      <div class="cell"><img src="lyricon-symbol.svg" class="blue" style="width:12px;height:12px" alt=""><span>12</span></div>
+    </div>
+  </div>
+
+  <h2 class="sec">App 图标形态</h2>
+  <div class="panel">
+    <div class="tiles">
+      <div class="cell"><img class="appicon" src="lyricon-appicon.svg" style="width:84px;height:84px" alt=""><span>圆角方形</span></div>
+      <div class="cell"><img class="appicon" src="lyricon-appicon.svg" style="width:84px;height:84px;border-radius:50%" alt=""><span>圆形</span></div>
+      <div class="cell"><img class="appicon" src="lyricon-appicon.svg" style="width:84px;height:84px;border-radius:0" alt=""><span>直角</span></div>
+      <div class="cell"><img class="appicon" src="lyricon-appicon.svg" style="width:48px;height:48px" alt=""><span>48</span></div>
+      <div class="cell"><img class="appicon" src="lyricon-appicon.svg" style="width:32px;height:32px" alt=""><span>32</span></div>
+      <div class="cell"><img class="appicon" src="lyricon-appicon.svg" style="width:20px;height:20px" alt=""><span>20</span></div>
+    </div>
+  </div>
+</body>
+</html>

@@ -70,8 +70,12 @@ object ControlAnimations {
             .start()
     }
 
-    /** 关闭：向上收缩吸入 + 淡出，结束后回调 [onEnd]。 */
-    fun playExit(view: View, onEnd: () -> Unit) {
+    /**
+     * 关闭：向上收缩吸入 + 淡出，结束后回调 [onEnd]。
+     *
+     * @param onUpdateAlpha 动画过程中更新 alpha (0.0~1.0)，用于同步更新模糊背景
+     */
+    fun playExit(view: View, onEnd: () -> Unit, onUpdateAlpha: ((Float) -> Unit)? = null) {
         view.animate()
             .translationY(-EXIT_OFFSET_DP.dp.toFloat())
             .scaleX(EXIT_SCALE)
@@ -79,6 +83,10 @@ object ControlAnimations {
             .alpha(0f)
             .setDuration(EXIT_DURATION_MS)
             .setInterpolator(EXIT_INTERPOLATOR)
+            .setUpdateListener {
+                // 读取 view 当前的 alpha 值
+                onUpdateAlpha?.invoke(view.alpha)
+            }
             .setListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) = onEnd()
             })

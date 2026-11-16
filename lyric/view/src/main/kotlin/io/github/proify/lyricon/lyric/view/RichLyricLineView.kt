@@ -117,6 +117,12 @@ class RichLyricLineView(
         secondary.requestScroll()
     }
 
+    fun resetAnimationState() {
+        animationTransition = false
+        pendingLine = null
+        pendingPosition = null
+    }
+
     fun setStyle(style: LyricViewStyle) {
         assembler.updateFlags(
             displayTranslation, displayRoma,
@@ -194,7 +200,7 @@ class RichLyricLineView(
     private var oldLine: IRichLyricLine? = null
 
     private fun refreshLines() {
-        if (oldLine === line && line.isTitleLine()) return
+        if (oldLine === line) return
         oldLine = line
 
         val mainResult = assembler.buildMain(line)

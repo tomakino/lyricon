@@ -29,6 +29,7 @@ include(
     ":bridge",
     ":xposed",
     ":common",
+    "yoyo"
 )
 
 include(":lyric:bridge:central")

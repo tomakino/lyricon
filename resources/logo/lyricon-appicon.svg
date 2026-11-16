@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2026 Proify, Tomakino
+  ~ Licensed under the Apache License, Version 2.0
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  -->
+<!--
+  词幕 Lyricon · App 图标（品牌蓝渐变底板 + 白色符号）
+  240×240 画布，rx=54。
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240"
+     role="img" aria-label="词幕 Lyricon">
+  <title>词幕 Lyricon</title>
+  <defs>
+    <linearGradient id="lc-bg" x1="0" y1="0" x2=".65" y2="1">
+      <stop offset="0" stop-color="#5AA2FF"/>
+      <stop offset="1" stop-color="#1B54D8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="240" height="240" rx="54" fill="url(#lc-bg)"/>
+  <circle cx="120" cy="115" r="70" fill="none" stroke="#FFFFFF" stroke-width="38"
+          stroke-dasharray="352 88" stroke-dashoffset="44"
+          transform="rotate(-64 120 115)"/>
+</svg>

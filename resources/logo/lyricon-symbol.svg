@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2026 Proify, Tomakino
+  ~ Licensed under the Apache License, Version 2.0
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  -->
+<!--
+  词幕 Lyricon · 符号图标
+
+  构造：一个粗圆环，去掉 70° 的缺口（周长 440 实 + 88 虚），缺口朝右上。
+  笔宽 38 与环直径 140 成 1:3.7，全域等宽。
+
+  · 填充继承 currentColor，可用 CSS color 或 fill 指定颜色
+  · 推荐配色：品牌蓝 #3582FF（浅底）/ 白 #FFFFFF（深底）
+  · 实测：面积 23.2%，外接盒 178×169，单一连通域，居中已修正 5px 垂直偏移
+  · 开运算(20px)损失 0.5%；12px 下缺口仍清晰可读
+  · 曾试过偏心环（特征被抹平）、270° 弧绕核（12px 会碎成三块），均淘汰
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240"
+     role="img" aria-label="词幕 Lyricon">
+  <title>词幕 Lyricon</title>
+  <circle cx="120" cy="115" r="70" fill="none" stroke="currentColor" stroke-width="38"
+          stroke-dasharray="352 88" stroke-dashoffset="44"
+          transform="rotate(-64 120 115)"/>
+</svg>

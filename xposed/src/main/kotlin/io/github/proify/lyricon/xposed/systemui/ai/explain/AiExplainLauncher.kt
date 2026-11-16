@@ -81,11 +81,18 @@ object AiExplainLauncher {
         val lyrics = song.lyrics.orEmpty()
         if (lyrics.isEmpty()) return ""
 
-        return lyrics.map { it.text.orEmpty() }
-            .filter { it.isNotBlank() }
-            .joinToString("\n") { "- $it" }
+        return lyrics.map { Pair(it.text.orEmpty(), it.secondary) }
+            .filter { it.first.isNotBlank() }
+            .joinToString("\n") {
+                val sb = StringBuilder("- \"${it.first}")
+                if (!it.second.isNullOrBlank()) {
+                    sb.append("\" (${it.second})")
+                }
+                sb.append("\"")
+                sb.toString()
+            }
             .also { YLog.info(TAG, "AI explain context (full song, ${it.length} chars): $it") }
-    }
+    }                                                                                                           
 
     /**
      * 用系统媒体会话元数据覆盖 Song 的标题/歌手（仅用于 AI 请求的元数据，

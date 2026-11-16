@@ -70,17 +70,20 @@ fun Double.formatToString(
 fun ByteArray.deflate(): ByteArray {
     if (isEmpty()) return byteArrayOf()
 
-    return Deflater().run {
-        setInput(this@deflate)
-        finish()
+    val deflater = Deflater()
+    try {
+        deflater.setInput(this)
+        deflater.finish()
 
-        ByteArrayOutputStream().use { output ->
+        return ByteArrayOutputStream().use { output ->
             val buffer = ByteArray(4096)
-            while (!finished()) {
-                output.write(buffer, 0, deflate(buffer))
+            while (!deflater.finished()) {
+                output.write(buffer, 0, deflater.deflate(buffer))
             }
             output.toByteArray()
-        }.also { end() }
+        }
+    } finally {
+        deflater.end()
     }
 }
 
@@ -90,18 +93,21 @@ fun ByteArray.deflate(): ByteArray {
 fun ByteArray.inflate(): ByteArray {
     if (isEmpty()) return byteArrayOf()
 
-    return Inflater().run {
-        setInput(this@inflate)
+    val inflater = Inflater()
+    try {
+        inflater.setInput(this)
 
-        ByteArrayOutputStream().use { output ->
+        return ByteArrayOutputStream().use { output ->
             val buffer = ByteArray(4096)
-            while (!finished()) {
-                val count = inflate(buffer)
-                if (count == 0 && needsInput()) break
+            while (!inflater.finished()) {
+                val count = inflater.inflate(buffer)
+                if (count == 0 && inflater.needsInput()) break
                 output.write(buffer, 0, count)
             }
             output.toByteArray()
-        }.also { end() }
+        }
+    } finally {
+        inflater.end()
     }
 }
 

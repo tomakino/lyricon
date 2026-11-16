@@ -18,8 +18,12 @@ kotlin {
 }
 
 dependencies {
-    implementation(libs.kotlinx.serialization.json)
+    // 公共模型带 @Serializable，消费方需要 kotlinx-serialization 运行时才能编解码，
+    // 因此按 API 依赖（api）暴露，而不是 implementation
+    api(libs.kotlinx.serialization.json)
     testImplementation(kotlin("test"))
+    // 测试直接使用 org.junit.*，显式声明而非依赖 kotlin("test") 的传递引入
+    testImplementation(libs.junit)
 }
 
 val version: String = rootProject.extra.get("lyricModelVersion") as String

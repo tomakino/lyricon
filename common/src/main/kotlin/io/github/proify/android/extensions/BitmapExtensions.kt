@@ -112,7 +112,7 @@ private fun calculateInSampleSize(
         val halfHeight = height / 2
         val halfWidth = width / 2
         while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
-            inSampleSize *= 2
+            inSampleSize = inSampleSize shl 1
         }
     }
     return inSampleSize
@@ -122,12 +122,8 @@ private fun calculateInSampleSize(
  * Drawable 转 Bitmap。
  */
 fun Drawable.toBitmap(): Bitmap {
-    if (this is BitmapDrawable && bitmap != null) {
-        if (bitmap.isRecycled) {
-            // 如果内部位图被回收，需要重新创建
-        } else {
-            return bitmap
-        }
+    if (this is BitmapDrawable && bitmap != null && !bitmap.isRecycled) {
+        return bitmap
     }
 
     val width = if (intrinsicWidth <= 0) 1 else intrinsicWidth

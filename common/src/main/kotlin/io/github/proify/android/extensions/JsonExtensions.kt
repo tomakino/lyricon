@@ -21,12 +21,10 @@ val json: Json = Json {
  */
 inline fun <reified T> defaultJson(): String {
     val clazz = T::class.java
-    return when {
-        clazz.isArray -> "[]"
-        Collection::class.java.isAssignableFrom(clazz) -> "[]"
-        Map::class.java.isAssignableFrom(clazz) -> "{}"
-        else -> "{}"
-    }
+    return if (
+        clazz.isArray ||
+        Collection::class.java.isAssignableFrom(clazz)
+    ) "[]" else "{}"
 }
 
 /**

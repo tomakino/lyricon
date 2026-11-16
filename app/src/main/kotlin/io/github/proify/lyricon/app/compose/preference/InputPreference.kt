@@ -119,7 +119,7 @@ fun StringInputPreference(
     holdDownState: Boolean = false,
     enabled: Boolean = true,
     label: String? = null,
-    maxLines: Int = 10,
+    maxLines: Int = 2,
     value: String? = null,
     onValueChange: ((String) -> Unit)? = null,
 ) {

@@ -41,9 +41,9 @@ internal class SongPreprocessor(private val placeholder: TitleSlot) {
         } else {
             val first = lyrics.first()
             if (first.begin > 0) {
-                var end = first.begin
-                if (end > 1) end-- //优化标题行和第一句歌词同时匹配的抖动
-                lyrics.add(0, titleLine(end, end, title))
+                val end = first.begin
+                val duration = if (end > 1) end - 1 else end
+                lyrics.add(0, titleLine(end, duration, title))
             }
         }
         song.lyrics = lyrics

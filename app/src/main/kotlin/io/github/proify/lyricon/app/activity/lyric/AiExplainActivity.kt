@@ -6,14 +6,20 @@
 
 package io.github.proify.lyricon.app.activity.lyric
 
+import android.R.attr.contentDescription
 import android.app.Activity
 import android.content.ClipData
-import android.graphics.Color
 
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,19 +34,25 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
-
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
@@ -79,7 +91,9 @@ import io.github.proify.lyricon.lyric.ai.explain.AiExplainContract
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -118,8 +132,8 @@ class AiExplainActivity : AbstractLyricActivity() {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
         window.isNavigationBarContrastEnforced = false
         setContent {
@@ -168,10 +182,6 @@ private class AiExplainState(
     var showMenu by mutableStateOf(false)
     var thinkingExpanded by mutableStateOf(false)
 
-    // 用户手动滑动标志：一旦用户手动滑动，停止自动滚动
-    var userHasScrolled by mutableStateOf(false)
-        private set
-
     // 增量经 Channel 单消费者串行消费（渲染树内消费，按窗口聚合后 append 到
     // streaming state）：不丢块、不重复、不重建整树——流式期间树稳定不闪烁。
     val reasoningChannel = Channel<String>(Channel.UNLIMITED)
@@ -184,10 +194,15 @@ private class AiExplainState(
     private var job: Job? = null
 
     /**
-     * 标记用户已手动滑动，停止自动滚动。
+     * 清理资源：关闭 Channel 并取消正在进行的 Job。
+     *
+     * 在 Composable 销毁时调用，防止内存泄漏和协程泄漏。
      */
-    fun markUserScrolled() {
-        userHasScrolled = true
+    fun dispose() {
+        job?.cancel()
+        job = null
+        reasoningChannel.close()
+        contentChannel.close()
     }
 
     fun startRequest(
@@ -202,8 +217,6 @@ private class AiExplainState(
         contentVisible = false
         contentEpoch++
         isLoading = true
-        // 重试时重置滚动标志，允许重新自动滚动
-        userHasScrolled = false
 
         job = scope.launch {
             if (lyrics.isBlank()) {
@@ -274,7 +287,8 @@ private class AiExplainState(
                 contentVisible = true
                 contentChannel.trySend("AI 解释失败，请检查网络与配置")
             } else {
-                scope.launch(Dispatchers.IO) {
+                // 使用 NonCancellable 确保缓存写入完成，即使 Activity 销毁
+                withContext(NonCancellable + Dispatchers.IO) {
                     AiExplainCache.put(
                         context,
                         cacheKey,
@@ -316,25 +330,12 @@ private fun AiExplainSheet(title: String, artist: String, album: String, lyrics:
 
     val state = remember { AiExplainState(title, artist, album, lyrics) }
 
+    // 在 Composable 销毁时清理资源，防止内存泄漏
+    DisposableEffect(Unit) {
+        onDispose { state.dispose() }
+    }
+
     LaunchedEffect(Unit) { state.startRequest(scope, context) }
-
-    // 检测用户手动滑动：一旦用户手动滑动，标记状态并停止自动滚动
-    LaunchedEffect(scrollState.isScrollInProgress) {
-        if (scrollState.isScrollInProgress) {
-            state.markUserScrolled()
-        }
-    }
-
-    // 流式滚动：token 到达时立即滚动，避免尾部内容被遮挡（仅在用户未手动滑动时）
-    LaunchedEffect(state.contentText) {
-        if (state.isLoading && state.contentText.isNotEmpty() && !state.userHasScrolled) {
-            scrollState.scrollTo(scrollState.maxValue)
-        }
-    }
-    // 结束加载时平滑滚到底（仅在用户未手动滑动时）
-    LaunchedEffect(state.isLoading) {
-        if (!state.isLoading && !state.userHasScrolled) scrollState.animateScrollTo(scrollState.maxValue)
-    }
 
     // 右上角"更多"菜单：复制 / 重试
     val menuEntries = rememberMenuEntries(
@@ -396,6 +397,8 @@ private fun AiExplainSheet(title: String, artist: String, album: String, lyrics:
                     expanded = state.thinkingExpanded,
                     onExpandedChange = { state.thinkingExpanded = it },
                     onDelta = { state.reasoningText += it },
+                    isLoading = state.isLoading,
+                    isReasoning = !state.contentVisible
                 )
                 Spacer(Modifier.height(16.dp))
             }
@@ -465,6 +468,8 @@ private fun ReasoningSection(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onDelta: (String) -> Unit,
+    isLoading: Boolean = false,
+    isReasoning : Boolean
 ) {
     key(epoch) {
         val reasoningStream = rememberStreamingMarkdownState()
@@ -486,17 +491,25 @@ private fun ReasoningSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onExpandedChange(!expanded) }
-                    .padding(14.dp)
+                    .padding(16.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconActions(painterResource(R.drawable.psychology_24px))
-                    Text(
-                        text = "思考过程",
-                        color = MiuixTheme.colorScheme.onSurface,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
+
+                    Icon(
                         modifier = Modifier
-                            .padding(start = 8.dp)
+                            .padding(start = 0.dp, end = 10.dp)
+                            .size(24.dp),
+                        painter = painterResource(R.drawable.psychology_24px),
+                        contentDescription = null,
+                        tint = MiuixTheme.colorScheme.onSurfaceSecondary
+                    )
+
+                    // 应用扫描光效到"思考过程"文本
+                    ShimmerText(
+                        text = "思考过程",
+                        isAnimating = isReasoning,
+                        modifier = Modifier
+                            .padding(start = 0.dp)
                             .weight(1f)
                     )
                     Icon(
@@ -595,14 +608,18 @@ private suspend fun consumeStreamingChannel(
     channel: Channel<String>,
     onBatch: suspend (String) -> Unit,
 ) {
-    while (true) {
-        val first = withTimeoutOrNull(120L) { channel.receive() } ?: continue
-        val batch = StringBuilder(first)
+    try {
         while (true) {
-            val extra = withTimeoutOrNull(50L) { channel.receive() } ?: break
-            batch.append(extra)
+            val first = withTimeoutOrNull(120L) { channel.receive() } ?: continue
+            val batch = StringBuilder(first)
+            while (true) {
+                val extra = withTimeoutOrNull(50L) { channel.receive() } ?: break
+                batch.append(extra)
+            }
+            onBatch(batch.toString())
         }
-        onBatch(batch.toString())
+    } catch (_: ClosedReceiveChannelException) {
+        // Channel 已关闭，正常退出消费循环
     }
 }
 
@@ -652,5 +669,105 @@ private fun rememberAiMarkdownTypography(): DefaultMarkdownTypography {
             table = TextStyle(fontSize = 15.sp, lineHeight = 26.sp),
             alertTitle = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold),
         )
+    }
+}
+
+/**
+ * 扫描光效画笔：颜色从左往右扫描，营造"思考中"的视觉反馈。
+ * 
+ * 动画效果：
+ * - 颜色渐变：白色半透明版本，在深色背景上更明显
+ * - 扫描宽度：100px（适中，避免过于宽泛）
+ * - 扫描速度：1000ms 一个周期（更快，更生动）
+ * - 动画类型：线性匀速
+ * 
+ * 设计考虑：
+ * - 使用白色而非主题色，在深色背景下更醒目
+ * - 半透明度 0.2f，确保不影响文字可读性
+ * - 扫描宽度适中，避免过于宽泛
+ * - 扫描速度适中，既不过快也不过慢
+ * 
+ * @param isAnimating 是否播放动画
+ * @return 扫描光效画笔，如果 isAnimating 为 false 则返回透明画笔
+ */
+@Composable
+private fun rememberShimmerBrush(isAnimating: Boolean): Brush {
+    if (!isAnimating) {
+        return remember { Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)) }
+    }
+    
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val translateAnim by infiniteTransition.animateFloat(
+        initialValue = -100f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer_translate"
+    )
+    
+    // 使用白色半透明，在深色背景下更醒目
+    val color = Color.White.copy(alpha = 0.5f)
+    
+    return remember(translateAnim, color) {
+        Brush.linearGradient(
+            colors = listOf(
+                Color.Transparent,
+                color,
+                Color.Transparent
+            ),
+            start = Offset(translateAnim - 100f, 0f),
+            end = Offset(translateAnim, 0f)
+        )
+    }
+}
+
+/**
+ * 扫描光效文本组件：在文字上方显示扫描光效。
+ * 
+ * 设计特点：
+ * - 使用 Box 布局，文字在底层，扫描光效在上层
+ * - 扫描光效使用白色半透明，在深色背景下更醒目
+ * - 动画仅在 isAnimating 为 true 时播放
+ * - 硬件加速优化，避免性能问题
+ * - 扫描光效在文字上方，不影响文字可读性
+ * 
+ * @param text 要显示的文本
+ * @param isAnimating 是否播放扫描动画
+ * @param modifier 修饰符
+ */
+@Composable
+private fun ShimmerText(
+    text: String,
+    isAnimating: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val shimmerBrush = rememberShimmerBrush(isAnimating = isAnimating)
+    
+    Box(modifier = modifier) {
+        // 底层文字
+        Text(
+            text = text,
+            color = MiuixTheme.colorScheme.onSurface,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+        )
+        
+        // 上层扫描光效（仅在动画时显示）
+        if (isAnimating) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer {
+                        // 启用硬件加速，优化性能
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
+                    .drawWithContent {
+                        // 绘制扫描光效
+                        drawRect(brush = shimmerBrush)
+                    }
+            )
+        }
     }
 }

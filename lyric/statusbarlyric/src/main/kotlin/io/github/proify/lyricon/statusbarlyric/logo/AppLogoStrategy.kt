@@ -10,45 +10,33 @@ import android.graphics.drawable.Drawable
 import java.util.WeakHashMap
 
 /**
- * 策略：显示当前活跃 App 的图标。
- * 作为兜底策略，不应用特殊颜色或动画。
+ * App 图标策略：显示当前活跃播放器的应用图标。
+ *
+ * 作为兜底策略使用：图标由系统管理且自带配色，因此不加 Tint、不加裁剪轮廓，
+ * 也不做任何动画。
  */
 class AppLogoStrategy(
-    val view: SuperLogo
-) : ILogoStrategy {
-    // 使用弱引用缓存防止 Context 泄漏
-    private val cacheIcons = WeakHashMap<String, Drawable>()
+    private val view: LyricLogoView
+) : LogoStrategy {
+
+    /** 包名到图标的弱键缓存，避免对同一应用反复查询 PackageManager。 */
+    private val iconCache = WeakHashMap<String, Drawable>()
 
     override var isEffective: Boolean = false
         private set
 
     override fun updateContent() {
+        // App 图标自带配色与形状：清掉其他策略可能遗留的效果
         if (view.imageTintList != null) view.imageTintList = null
         if (view.outlineProvider != null) view.outlineProvider = null
 
-        val activePackage = view.activePackage
-        val icon = if (activePackage.isNullOrBlank()) null else getIcon(activePackage)
-
+        val icon = view.activePackage?.takeIf { it.isNotBlank() }?.let(::loadAppIcon)
         view.setImageDrawable(icon)
         isEffective = icon != null
-        view.updateVisibility()
+        view.refreshVisibility()
     }
 
-    private fun getIcon(packageName: String): Drawable? {
-        if (packageName.isBlank()) return null
-
-        cacheIcons[packageName]?.let { return it }
-
-        return try {
-            val icon = view.context.packageManager.getApplicationIcon(packageName)
-            cacheIcons[packageName] = icon
-            icon
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    override fun onColorUpdate() {
+    override fun onStatusColorChanged() {
         // App 图标保持原色
     }
 
@@ -57,8 +45,28 @@ class AppLogoStrategy(
     }
 
     override fun onDetach() {
-        // App 图标通常较小且由系统缓存管理，可不主动清理，或根据内存策略清理
+        // 图标通常较小且由系统缓存管理，这里不主动清理，避免反复查询 PackageManager
     }
 
-    override fun onVisibilityChanged(visible: Boolean) {}
+    override fun onVisibilityChanged(visible: Boolean) {
+        // App 图标不依赖可见性做动画，无需处理
+    }
+
+    // --- 内部逻辑 ---
+
+    /**
+     * 加载应用图标。
+     *
+     * 包名可能已卸载或对当前进程不可见，查询失败时返回 null，由视图自行隐藏。
+     */
+    private fun loadAppIcon(packageName: String): Drawable? {
+        iconCache[packageName]?.let { return it }
+
+        val icon = runCatching {
+            view.context.packageManager.getApplicationIcon(packageName)
+        }.getOrNull() ?: return null
+
+        iconCache[packageName] = icon
+        return icon
+    }
 }

@@ -30,7 +30,6 @@ class AiTranslatorManagerTest {
         // 配置信息：建议使用支持长上下文的模型
         val configs = AiConfig(
             apiKey = apiKey,
-            provider = "openai",
             model = System.getenv("AI_TRANSLATION_MODEL") ?: "deepseek-chat",
             baseUrl = System.getenv("AI_TRANSLATION_BASE_URL") ?: "https://api.deepseek.com/v1"
         )

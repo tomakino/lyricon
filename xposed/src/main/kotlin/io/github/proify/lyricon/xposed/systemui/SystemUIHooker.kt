@@ -24,6 +24,7 @@ import io.github.proify.lyricon.xposed.ModuleEntry
 import io.github.proify.lyricon.xposed.hook.PackageHooker
 import io.github.proify.lyricon.xposed.logger.YLog
 import io.github.proify.lyricon.xposed.systemui.ai.translate.AiTranslator
+import io.github.proify.lyricon.xposed.systemui.analytics.PlayHistoryCollector
 import io.github.proify.lyricon.xposed.systemui.hook.OplusCapsuleHooker
 import io.github.proify.lyricon.xposed.systemui.hook.StatusBarColorMonitor
 import io.github.proify.lyricon.xposed.systemui.hook.StatusBarDisableHooker
@@ -41,6 +42,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * SystemUI Hook 入口对象
@@ -155,6 +157,9 @@ object SystemUIHooker : PackageHooker() {
         StatusBarColorMonitor.initialize(module, classLoader)
         AiTranslator.init(context)
         SystemUIMediaUtils.init(context)
+
+        // 初始化播放数据收集器（写入本地文件，通过 LyriconBridge 暴露 PFD）
+        PlayHistoryCollector.init(context)
         StatusBarViewResolver.init(module, context)
     }
 
@@ -196,7 +201,7 @@ object SystemUIHooker : PackageHooker() {
 
         })
         mainCoroutineScope.launch {
-            delay(2000)
+            delay(2000.milliseconds)
             subscriber.register()
         }
     }
@@ -231,6 +236,16 @@ object SystemUIHooker : PackageHooker() {
             onCommand(AppBridgeConstants.REQUEST_CLEAR_TRANSLATION_DB) {
                 AiTranslator.clearCache { LyricDataHub.reprocessCurrentSong() }
             }
+
+            onQuery(AppBridgeConstants.REQUEST_PLAY_HISTORY) {
+                YLog.info(TAG, "App requested play history PFD")
+
+                val pfd = PlayHistoryCollector.openFd()
+                YLog.info(TAG, "Play history PFD reply: ${pfd?.fd}")
+                reply(Bundle().apply {
+                  if (pfd!=null)  putParcelable("pfd", pfd)
+                })
+            }
         }
     }
 
@@ -239,7 +254,7 @@ object SystemUIHooker : PackageHooker() {
      */
     private fun addStatusBarView(view: ViewGroup) {
         view.doOnAttach {
-            val target = view.rootView as? ViewGroup ?: return@doOnAttach
+            val target = view
             val controller = StatusBarViewController(target, LyricPrefs.getLyricStyle())
             StatusBarViewManager.add(controller)
 

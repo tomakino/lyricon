@@ -112,8 +112,7 @@ object AiChatClient {
                 respStream.stream().forEach { chunk ->
                     val delta = chunk.choices().firstOrNull()
                         ?.let { runCatching { it.delta() }.getOrNull() } ?: return@forEach
-                    // 注意：增量必须原样透传（空格/换行/纯标点都是合法内容），
-                    // 不能以 isNotBlank 过滤，否则会吞掉空白 token 造成文字粘连。
+
                     delta.content().ifPresent {
                         content.append(it)
                         onContent(it)

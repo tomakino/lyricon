@@ -294,6 +294,9 @@
     <string name="edit_ai_provider_config">编辑提供商</string>
 
     <string name="section_ai_explain">音乐解读</string>
+    <string name="section_ai_music_analysis">音乐画像</string>
+    <string name="item_ai_music_analysis">分析我的音乐画像</string>
+    <string name="item_ai_music_analysis_summary">基于你的播放历史，AI 分析你的音乐年龄、MBTI 人格等</string>
     <string name="item_ai_explain_custom_prompt">自定义提示词</string>
     <string name="item_ai_explain_custom_prompt_summary">自定义音乐解读的系统提示词</string>
     <string name="dialog_title_ai_explain_custom_prompt">自定义系统提示词</string>
