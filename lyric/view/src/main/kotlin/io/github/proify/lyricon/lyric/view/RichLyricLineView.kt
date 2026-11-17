@@ -86,12 +86,8 @@ class RichLyricLineView(
         enableRelativeProgress, enableRelativeProgressHighlight
     )
 
-    private var animationTransition = false
-    private var pendingLine: IRichLyricLine? = null
-    private var pendingPosition: Long? = null
     private var lastAppliedPosition: Long? = null
-    private var pendingIsTitle = false
-    private var appliedTitle = false
+    private var appliedIsTitle = false
     private var requestMarquee = false
 
     var rawLine: IRichLyricLine? = null
@@ -101,16 +97,12 @@ class RichLyricLineView(
         set(value) {
             rawLine = value
             requestMarquee = false
-            if (animationTransition) {
-                pendingLine = value
-            } else {
-                refreshLines()
-            }
+            refreshLines()
         }
 
-    /** 设置行内容及标题行标记；动画期间与内容一起延迟到切换点应用。 */
+    /** 设置行内容及标题行标记；内容提交由上层在切换动画的 in 阶段调用。 */
     fun setLine(line: IRichLyricLine?, isTitle: Boolean) {
-        pendingIsTitle = isTitle
+        isTitleLine = isTitle
         this.line = line
     }
 
@@ -123,30 +115,12 @@ class RichLyricLineView(
     }
 
     fun reset() {
-        pendingIsTitle = false
-        animationTransition = false
+        isTitleLine = false
         lastAppliedPosition = null
         line = null
         renderScale = 1.0f
-        pendingLine = null
-        pendingPosition = null
         alwaysShowSecondary = false
         refreshLines()
-    }
-
-    fun beginAnimationTransition() {
-        animationTransition = true
-    }
-
-    fun endAnimationTransition() {
-        animationTransition = false
-        lastAppliedPosition = null
-        if (pendingLine != null) {
-            refreshLines()
-            pendingPosition?.let { setPosition(it) }
-        }
-        pendingLine = null
-        pendingPosition = null
     }
 
     fun setTransitionConfig(config: String?) {
@@ -156,20 +130,14 @@ class RichLyricLineView(
     fun notifyLineChanged() = refreshSecondary()
 
     fun seekTo(position: Long) {
-        if (animationTransition) {
-            pendingPosition = position; return
-        }
         lastAppliedPosition = position
         main.seekTo(position)
         secondary.seekTo(position)
     }
 
     fun setPosition(position: Long) {
-        if (!animationTransition && position == lastAppliedPosition) return
+        if (position == lastAppliedPosition) return
         lastAppliedPosition = position
-        if (animationTransition) {
-            pendingPosition = position; return
-        }
         main.updatePosition(position)
         secondary.updatePosition(position)
     }
@@ -181,9 +149,7 @@ class RichLyricLineView(
     }
 
     fun resetAnimationState() {
-        animationTransition = false
-        pendingLine = null
-        pendingPosition = null
+        lastAppliedPosition = null
     }
 
     fun setStyle(style: LyricViewStyle) {
@@ -263,15 +229,15 @@ class RichLyricLineView(
     private var oldLine: IRichLyricLine? = null
 
     private fun refreshLines() {
-        if (oldLine === line && appliedTitle == pendingIsTitle) return
+        if (oldLine === line && appliedIsTitle == isTitleLine) return
         oldLine = line
-        appliedTitle = pendingIsTitle
-        isTitleLine = pendingIsTitle
+        appliedIsTitle = isTitleLine
         lastAppliedPosition = null
 
         val mainResult = assembler.buildMain(line, isTitleLine)
         main.setLyric(mainResult.line)
         main.isScrollOnly = mainResult.isScrollOnly
+        main.isCharMotionSuppressed = mainResult.syntheticSingleWord
 
         val secResult = assembler.buildSecondary(line)
         alwaysShowSecondary = secResult.alwaysShow
@@ -279,6 +245,7 @@ class RichLyricLineView(
         lastSecondaryLine = secResult.line
         secondary.setLyric(secResult.line)
         secondary.isScrollOnly = secResult.isScrollOnly
+        secondary.isCharMotionSuppressed = secResult.syntheticSingleWord
 
         if (requestMarquee) requestStartMarquee()
     }
@@ -303,6 +270,7 @@ class RichLyricLineView(
         alwaysShowSecondary = secResult.alwaysShow
         secondary.visibleIfChanged = secResult.alwaysShow
         secondary.isScrollOnly = secResult.isScrollOnly
+        secondary.isCharMotionSuppressed = secResult.syntheticSingleWord
         if (lastSecondaryLine != secResult.line) {
             lastSecondaryLine = secResult.line
             lastAppliedPosition = null

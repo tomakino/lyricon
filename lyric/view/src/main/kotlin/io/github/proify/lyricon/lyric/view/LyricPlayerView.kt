@@ -82,6 +82,9 @@ open class LyricPlayerView(
     /** 最近一次外部播放位置。 */
     private var lastPosition: Long? = null
 
+    /** 最近一次完成视图同步的位置。 */
+    private var lastSyncedPosition: Long? = null
+
     val lyricCountChangeListeners = CopyOnWriteArraySet<LyricCountChangeListener>()
 
     private val mainPlayListener = object : LyricPlayListener {
@@ -126,6 +129,7 @@ open class LyricPlayerView(
                 lineList = prepared.lines
                 timingNavigator = TimingNavigator(prepared.lines.toTypedArray())
                 field = value
+                lastSyncedPosition = null
 
                 val position = lastPosition
                 if (position != null) {
@@ -242,6 +246,8 @@ open class LyricPlayerView(
         pendingText = null
         hasPendingText = false
         lastPosition = null
+        lastSyncedPosition = null
+        lastSyncedPosition = null
         titleLine = null
         titleView = null
         removeAllViews()
@@ -263,6 +269,7 @@ open class LyricPlayerView(
         switchState = SwitchState.Idle
         pendingText = null
         hasPendingText = false
+        lastSyncedPosition = null
         removeAllViews()
         titleView = null
         activeLines.clear()
@@ -288,6 +295,8 @@ open class LyricPlayerView(
 
     private fun updatePosition(position: Long, seekTo: Boolean = false) {
         if (isTextMode) return
+        if (!seekTo && position == lastSyncedPosition) return
+        lastSyncedPosition = position
         lastPosition = position
         if (switching) {
             forEach { view ->
@@ -411,8 +420,6 @@ open class LyricPlayerView(
         val generation = ++switchGeneration
         switchState = SwitchState.Running(generation, recycle === titleView)
         recycle.resetAnimationState()
-        recycle.beginAnimationTransition()
-        recycle.setLine(newLine.line, false)
         animateUpdate(preset, onCompleted = { cancelled ->
             if ((switchState as? SwitchState.Running)?.generation == generation) {
                 if (cancelled) {
@@ -422,7 +429,9 @@ open class LyricPlayerView(
                 }
             }
         }) {
-            recycle.endAnimationTransition()
+            // out 阶段显示旧行；in 开始时才提交新行内容与当前位置。
+            recycle.setLine(newLine.line, false)
+            lastPosition?.let { recycle.setPosition(it) }
             recycle.requestStartMarquee()
             updateViewsVisibility()
         }
@@ -436,8 +445,6 @@ open class LyricPlayerView(
         val generation = ++switchGeneration
         switchState = SwitchState.Running(generation, fromTitle = false)
         recycle.resetAnimationState()
-        recycle.beginAnimationTransition()
-        recycle.setLine(title, true)
         animateUpdate(preset, onCompleted = { cancelled ->
             if ((switchState as? SwitchState.Running)?.generation == generation) {
                 if (cancelled) {
@@ -447,7 +454,8 @@ open class LyricPlayerView(
                 }
             }
         }) {
-            recycle.endAnimationTransition()
+            recycle.setLine(title, true)
+            lastPosition?.let { recycle.setPosition(it) }
             recycle.requestStartMarquee()
             updateViewsVisibility()
         }
@@ -466,6 +474,7 @@ open class LyricPlayerView(
         val position = lastPosition
         val applied = flushPending()
         if (!applied && position != null && !switching && !isTextMode) {
+            lastSyncedPosition = null
             updatePosition(position)
         }
     }
@@ -497,6 +506,7 @@ open class LyricPlayerView(
         val position = lastPosition
         val applied = flushPending()
         if (!applied && position != null && !switching && !isTextMode) {
+            lastSyncedPosition = null
             updatePosition(position)
         }
     }

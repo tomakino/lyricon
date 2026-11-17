@@ -18,6 +18,7 @@ internal class FrameAnimator(
     private val onFrame: (deltaNanos: Long) -> Boolean,
     private val requestInvalidate: () -> Unit,
     private val shouldRun: () -> Boolean,
+    private val keepRunning: () -> Boolean = { false },
     private val post: (Runnable) -> Unit,
 ) : Choreographer.FrameCallback {
 
@@ -49,7 +50,15 @@ internal class FrameAnimator(
         val deltaNanos = if (lastFrameNanos == 0L) 0L else frameTimeNanos - lastFrameNanos
         lastFrameNanos = frameTimeNanos
 
-        if (onFrame(deltaNanos)) requestInvalidate()
+        val changed = onFrame(deltaNanos)
+        if (changed) requestInvalidate()
+
+        // 没有内容变化且渲染器也不在播放时停止调度，避免静态行/暂停态每帧空转。
+        if (!changed && !keepRunning()) {
+            running = false
+            lastFrameNanos = 0L
+            return
+        }
 
         if (running) {
             Choreographer.getInstance().postFrameCallback(this)

@@ -30,6 +30,9 @@ internal class WordSyncRenderer(private val view: LyricLineView) : LineRenderer 
 
     var isCharMotionEnabled = true
 
+    /** 普通行合成的单 word 只用于进度高亮，不参与逐字特效。 */
+    var isCharMotionSuppressed = false
+
     var isGradientEnabled = true
         set(value) {
             if (field != value) {
@@ -185,7 +188,8 @@ internal class WordSyncRenderer(private val view: LyricLineView) : LineRenderer 
             canvas, model, viewWidth, viewHeight,
             state.scrollOffset, model.width > viewWidth,
             progressAnimator.currentWidth,
-            isGradientEnabled, isScrollOnly, isCharMotionEnabled,
+            isGradientEnabled, isScrollOnly,
+            isCharMotionEnabled && !isCharMotionSuppressed,
             bgPaint, hlPaint, paint
         )
     }

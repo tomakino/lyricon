@@ -75,6 +75,16 @@ open class LyricLineView(context: Context, attrs: AttributeSet? = null) :
             invalidate()
         }
 
+    /** 合成单 word 行只保留整行进度，不参与逐字字符动画。 */
+    var isCharMotionSuppressed: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            syncRenderer.isCharMotionSuppressed = value
+            requestLayout()
+            invalidate()
+        }
+
     var wordMotion: WordMotion = WordMotion()
         set(value) {
             if (field == value) return
@@ -134,13 +144,30 @@ open class LyricLineView(context: Context, attrs: AttributeSet? = null) :
     /** 隐藏时仍推进时间轴；背景歌词行需要靠 isStarted 触发显示，不能因 GONE 停表。 */
     var runWhenHidden = false
 
+    /** 隐藏行累计的帧间隔，用于降频推进而不是丢时间。 */
+    private var hiddenDeltaNanos = 0L
+    private var hiddenFrameCount = 0
+
     /** 帧调度：每帧步进当前渲染器，有变化时请求重绘。 */
     private val animator = FrameAnimator(
-        onFrame = { deltaNanos ->
+        onFrame = onFrame@{ deltaNanos ->
+            // 背景次行不可见时只需要在词时间边界附近醒来；30fps 足够触发且省电。
+            if (!isShown && runWhenHidden) {
+                hiddenDeltaNanos += deltaNanos
+                hiddenFrameCount++
+                if (hiddenFrameCount % 2 != 0) return@onFrame false
+                val delta = hiddenDeltaNanos
+                hiddenDeltaNanos = 0L
+                return@onFrame activeRenderer.step(delta, _model, lineState, measuredWidth)
+            }
+            hiddenDeltaNanos = 0L
             activeRenderer.step(deltaNanos, _model, lineState, measuredWidth)
         },
         requestInvalidate = { postInvalidateOnAnimation() },
         shouldRun = { isAttachedToWindow && (isShown || runWhenHidden) && !animationPaused },
+        keepRunning = {
+            activeRenderer.isPlaying || (runWhenHidden && !activeRenderer.isFinished)
+        },
         post = { runnable -> post(runnable) },
     )
 
