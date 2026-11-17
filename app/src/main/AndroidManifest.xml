@@ -78,14 +78,6 @@
             android:taskAffinity=""
             android:theme="@style/Theme.Translucent" />
 
-        <!--
-            AI 音乐画像分析：独立空 taskAffinity，透明弹层模式
-        -->
-        <activity
-            android:name=".activity.lyric.MusicAnalysisActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Translucent" />
-
         <activity
             android:name=".activity.lyric.AnchorViewTreeActivity"
             android:label="@string/activity_anchor" />

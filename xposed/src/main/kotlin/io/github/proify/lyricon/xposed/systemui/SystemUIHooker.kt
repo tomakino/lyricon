@@ -24,7 +24,6 @@ import io.github.proify.lyricon.xposed.ModuleEntry
 import io.github.proify.lyricon.xposed.hook.PackageHooker
 import io.github.proify.lyricon.xposed.logger.YLog
 import io.github.proify.lyricon.xposed.systemui.ai.translate.AiTranslator
-import io.github.proify.lyricon.xposed.systemui.analytics.PlayHistoryCollector
 import io.github.proify.lyricon.xposed.systemui.hook.OplusCapsuleHooker
 import io.github.proify.lyricon.xposed.systemui.hook.StatusBarColorMonitor
 import io.github.proify.lyricon.xposed.systemui.hook.StatusBarDisableHooker
@@ -158,8 +157,6 @@ object SystemUIHooker : PackageHooker() {
         AiTranslator.init(context)
         SystemUIMediaUtils.init(context)
 
-        // 初始化播放数据收集器（写入本地文件，通过 LyriconBridge 暴露 PFD）
-        PlayHistoryCollector.init(context)
         StatusBarViewResolver.init(module, context)
     }
 
@@ -235,16 +232,6 @@ object SystemUIHooker : PackageHooker() {
 
             onCommand(AppBridgeConstants.REQUEST_CLEAR_TRANSLATION_DB) {
                 AiTranslator.clearCache { LyricDataHub.reprocessCurrentSong() }
-            }
-
-            onQuery(AppBridgeConstants.REQUEST_PLAY_HISTORY) {
-                YLog.info(TAG, "App requested play history PFD")
-
-                val pfd = PlayHistoryCollector.openFd()
-                YLog.info(TAG, "Play history PFD reply: ${pfd?.fd}")
-                reply(Bundle().apply {
-                  if (pfd!=null)  putParcelable("pfd", pfd)
-                })
             }
         }
     }

@@ -6,7 +6,6 @@
 
 package io.github.proify.lyricon.app.activity.lyric
 
-import android.content.Intent
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -157,26 +156,6 @@ class AiLaboratoryActivity : AbstractLyricActivity() {
                         .fillMaxWidth(),
                 ) {
                     AiTranslationPreference(preferences)
-                }
-            }
-
-            item(key = "ai_music_analysis") {
-                SmallTitle(
-                    text = stringResource(R.string.section_ai_music_analysis),
-                    insideMargin = SectionTitlePadding,
-                )
-                Card(
-                    modifier = Modifier
-                        .padding(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 0.dp)
-                        .fillMaxWidth(),
-                ) {
-                    ArrowPreference(
-                        title = stringResource(R.string.item_ai_music_analysis),
-                        summary = stringResource(R.string.item_ai_music_analysis_summary),
-                        onClick = {
-                            startActivity(Intent(this@AiLaboratoryActivity, MusicAnalysisActivity::class.java))
-                        }
-                    )
                 }
             }
 

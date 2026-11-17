@@ -338,15 +338,10 @@ class StatusBarViewController(
 
         lyricView.gestureEnabled = gestureEnabled
         lyricView.hapticEnabled = LyricPrefs.gestureHapticEnabled
-        if (gestureEnabled) {
-            lyricView.setOnClickListener(null)
-        } else {
-            lyricView.setOnClickListener { v ->
-                LyricControlPopup.show(v)
-            }
-        }
-        // setOnClickListener(null) 会关闭 clickable,这里恢复以保持手势模式下的点击语义(无障碍)
-        lyricView.isClickable = true
+
+        // 控制面板统一由手势动作管理（默认单击 = ACTION_OPEN_CONTROL），
+        // 不再回退到 View 的点击监听器。
+        lyricView.setOnClickListener(null)
     }
 
     /**

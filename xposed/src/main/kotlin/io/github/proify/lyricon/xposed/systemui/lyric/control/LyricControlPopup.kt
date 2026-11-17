@@ -221,7 +221,7 @@ object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCover
 
     /**
      * 在 [anchorView] 附近显示控制窗口（若已在显示则切换为关闭）。
-     * 通常由点击状态栏歌词视图触发。
+     * 由状态栏歌词的手势动作触发（默认单击 = ACTION_OPEN_CONTROL）。
      */
     @SuppressLint("ClickableViewAccessibility")
     @JvmStatic

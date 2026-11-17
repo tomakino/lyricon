@@ -87,8 +87,7 @@ data class LyricMetadata(
      * `false` 的不对称结果，进而让 `HashMap`/`HashSet` 的查找行为不可预期。
      */
     override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        return when (other) {
+        return this === other || when (other) {
             is LyricMetadata -> map == other.map
             is Map<*, *> -> map == other
             else -> false

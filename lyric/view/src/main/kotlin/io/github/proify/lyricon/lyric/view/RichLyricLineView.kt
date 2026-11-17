@@ -27,7 +27,11 @@ class RichLyricLineView(
 ) : LinearLayout(context), UpdatableColor {
 
     val main = LyricLineView(context)
-    val secondary = LyricLineView(context).apply { visibleIfChanged = false }
+    val secondary = LyricLineView(context).apply {
+        visibleIfChanged = false
+        // 次行初始不可见，但背景歌词必须按自己的词时间触发；GONE 时仍需推进时间轴。
+        runWhenHidden = true
+    }
 
     var alwaysShowSecondary = false
 
@@ -85,6 +89,7 @@ class RichLyricLineView(
     private var animationTransition = false
     private var pendingLine: IRichLyricLine? = null
     private var pendingPosition: Long? = null
+    private var lastAppliedPosition: Long? = null
     private var pendingIsTitle = false
     private var appliedTitle = false
     private var requestMarquee = false
@@ -120,6 +125,7 @@ class RichLyricLineView(
     fun reset() {
         pendingIsTitle = false
         animationTransition = false
+        lastAppliedPosition = null
         line = null
         renderScale = 1.0f
         pendingLine = null
@@ -134,6 +140,7 @@ class RichLyricLineView(
 
     fun endAnimationTransition() {
         animationTransition = false
+        lastAppliedPosition = null
         if (pendingLine != null) {
             refreshLines()
             pendingPosition?.let { setPosition(it) }
@@ -152,11 +159,14 @@ class RichLyricLineView(
         if (animationTransition) {
             pendingPosition = position; return
         }
+        lastAppliedPosition = position
         main.seekTo(position)
         secondary.seekTo(position)
     }
 
     fun setPosition(position: Long) {
+        if (!animationTransition && position == lastAppliedPosition) return
+        lastAppliedPosition = position
         if (animationTransition) {
             pendingPosition = position; return
         }
@@ -257,6 +267,7 @@ class RichLyricLineView(
         oldLine = line
         appliedTitle = pendingIsTitle
         isTitleLine = pendingIsTitle
+        lastAppliedPosition = null
 
         val mainResult = assembler.buildMain(line, isTitleLine)
         main.setLyric(mainResult.line)
@@ -294,6 +305,7 @@ class RichLyricLineView(
         secondary.isScrollOnly = secResult.isScrollOnly
         if (lastSecondaryLine != secResult.line) {
             lastSecondaryLine = secResult.line
+            lastAppliedPosition = null
             secondary.setLyric(secResult.line)
             if (requestMarquee) requestStartMarquee()
         }

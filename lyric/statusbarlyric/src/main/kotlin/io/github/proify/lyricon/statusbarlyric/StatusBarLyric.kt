@@ -451,10 +451,8 @@ class StatusBarLyric(
     // --- 触摸事件 ---
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (!touchController.isGestureEnabled) {
-            // 手势关闭：交给系统默认触摸行为，由点击监听器处理单击
-            return super.onTouchEvent(event)
-        }
+        // 手势关闭：不消费任何触摸事件，避免拦截状态栏下拉/边缘手势
+        if (!touchController.isGestureEnabled) return false
         return touchController.onTouchEvent(event)
     }
 

@@ -70,8 +70,9 @@ internal class LyricTouchController(private val target: View) {
     var isGestureEnabled: Boolean = true
         set(value) {
             field = value
-            // 保持 clickable 语义，便于无障碍服务与默认触摸行为兼容
-            target.isClickable = true
+            // 关闭时同时撤掉所有触摸消费属性，让事件穿透到状态栏下层
+            target.isClickable = value
+            target.isLongClickable = value
         }
 
     /** 是否启用触觉反馈，由上层控制器按用户偏好配置，默认开启。 */

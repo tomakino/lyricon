@@ -16,6 +16,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.StartOffset
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -49,12 +50,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -110,6 +114,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import top.yukonga.miuix.kmp.window.WindowCascadingListPopup
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * AI 音乐解读（透明 Activity）
@@ -171,7 +176,6 @@ private class AiExplainState(
     private val album: String,
     private val lyrics: String,
 ) {
-    var reasoningText by mutableStateOf("")
     var contentText by mutableStateOf("")
     var reasoningVisible by mutableStateOf(false)
         private set
@@ -211,7 +215,6 @@ private class AiExplainState(
         forceRefresh: Boolean = false
     ) {
         job?.cancel()
-        reasoningText = ""
         contentText = ""
         reasoningVisible = false
         contentVisible = false
@@ -364,7 +367,8 @@ private fun AiExplainSheet(title: String, artist: String, album: String, lyrics:
                 IconButton(onClick = { state.showMenu = true }) {
                     Icon(
                         imageVector = MiuixIcons.More,
-                        contentDescription = "更多操作",
+                        contentDescription = null,
+                        tint = MiuixTheme.colorScheme.onSurface
                     )
                 }
                 WindowCascadingListPopup(
@@ -396,9 +400,7 @@ private fun AiExplainSheet(title: String, artist: String, album: String, lyrics:
                     epoch = state.contentEpoch,
                     expanded = state.thinkingExpanded,
                     onExpandedChange = { state.thinkingExpanded = it },
-                    onDelta = { state.reasoningText += it },
                     isLoading = state.isLoading,
-                    isReasoning = !state.contentVisible
                 )
                 Spacer(Modifier.height(16.dp))
             }
@@ -467,17 +469,16 @@ private fun ReasoningSection(
     epoch: Int,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
-    onDelta: (String) -> Unit,
     isLoading: Boolean = false,
-    isReasoning : Boolean
 ) {
     key(epoch) {
         val reasoningStream = rememberStreamingMarkdownState()
         // 消费 Channel 增量
         LaunchedEffect(Unit) {
             consumeStreamingChannel(channel) { text ->
-                reasoningStream.append(text)
-                onDelta(text)
+                withContext(Dispatchers.Default) {
+                    reasoningStream.append(text)
+                }
             }
         }
 
@@ -504,10 +505,11 @@ private fun ReasoningSection(
                         tint = MiuixTheme.colorScheme.onSurfaceSecondary
                     )
 
-                    // 应用扫描光效到"思考过程"文本
-                    ShimmerText(
+                    Text(
                         text = "思考过程",
-                        isAnimating = isReasoning,
+                        color = MiuixTheme.colorScheme.onSurface,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
                         modifier = Modifier
                             .padding(start = 0.dp)
                             .weight(1f)
@@ -584,7 +586,9 @@ private fun AiStreamingMarkdownText(
         // 消费 Channel 增量
         LaunchedEffect(Unit) {
             consumeStreamingChannel(flow) { text ->
-                streamingState.append(text)
+                withContext(Dispatchers.Default) {
+                    streamingState.append(text)
+                }
                 onDelta(text)
             }
         }
@@ -599,27 +603,27 @@ private fun AiStreamingMarkdownText(
 }
 
 /**
- * 从 Channel 串行消费增量：120ms 窗口聚合，减少 UI 更新频率。
+ * 从 Channel 串行消费增量：按上游到达节奏消费，只合并同一时刻已经在队列里的 chunk。
+ *
+ * 不等待固定时间窗，避免流式内容被人为延迟；append 由调用方放到后台线程，
+ * 主线程只负责 UI 状态。
  *
  * @param channel 数据源 Channel
- * @param onBatch 收到一批增量时的回调（已聚合），支持 suspend 调用
+ * @param onBatch 收到一批增量时的回调（已合并当前队列），支持 suspend 调用
  */
 private suspend fun consumeStreamingChannel(
     channel: Channel<String>,
     onBatch: suspend (String) -> Unit,
 ) {
-    try {
+    while (true) {
+        val first = channel.receiveCatching().getOrNull() ?: break
+        val batch = StringBuilder(first)
+        // 只取“此刻已经到达”的 chunk，不额外等待。
         while (true) {
-            val first = withTimeoutOrNull(120L) { channel.receive() } ?: continue
-            val batch = StringBuilder(first)
-            while (true) {
-                val extra = withTimeoutOrNull(50L) { channel.receive() } ?: break
-                batch.append(extra)
-            }
-            onBatch(batch.toString())
+            val next = channel.tryReceive().getOrNull() ?: break
+            batch.append(next)
         }
-    } catch (_: ClosedReceiveChannelException) {
-        // Channel 已关闭，正常退出消费循环
+        onBatch(batch.toString())
     }
 }
 
@@ -674,102 +678,4 @@ private fun rememberAiMarkdownTypography(): DefaultMarkdownTypography {
     }
 }
 
-/**
- * 扫描光效画笔：颜色从左往右扫描，营造"思考中"的视觉反馈。
- * 
- * 动画效果：
- * - 颜色渐变：白色半透明版本，在深色背景上更明显
- * - 扫描宽度：100px（适中，避免过于宽泛）
- * - 扫描速度：1000ms 一个周期（更快，更生动）
- * - 动画类型：线性匀速
- * 
- * 设计考虑：
- * - 使用白色而非主题色，在深色背景下更醒目
- * - 半透明度 0.2f，确保不影响文字可读性
- * - 扫描宽度适中，避免过于宽泛
- * - 扫描速度适中，既不过快也不过慢
- * 
- * @param isAnimating 是否播放动画
- * @return 扫描光效画笔，如果 isAnimating 为 false 则返回透明画笔
- */
-@Composable
-private fun rememberShimmerBrush(isAnimating: Boolean): Brush {
-    if (!isAnimating) {
-        return remember { Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)) }
-    }
-    
-    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim by infiniteTransition.animateFloat(
-        initialValue = -100f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmer_translate"
-    )
-    
-    // 使用白色半透明，在深色背景下更醒目
-    val color = Color.White.copy(alpha = 0.5f)
-    
-    return remember(translateAnim, color) {
-        Brush.linearGradient(
-            colors = listOf(
-                Color.Transparent,
-                color,
-                Color.Transparent
-            ),
-            start = Offset(translateAnim - 100f, 0f),
-            end = Offset(translateAnim, 0f)
-        )
-    }
-}
 
-/**
- * 扫描光效文本组件：在文字上方显示扫描光效。
- * 
- * 设计特点：
- * - 使用 Box 布局，文字在底层，扫描光效在上层
- * - 扫描光效使用白色半透明，在深色背景下更醒目
- * - 动画仅在 isAnimating 为 true 时播放
- * - 硬件加速优化，避免性能问题
- * - 扫描光效在文字上方，不影响文字可读性
- * 
- * @param text 要显示的文本
- * @param isAnimating 是否播放扫描动画
- * @param modifier 修饰符
- */
-@Composable
-private fun ShimmerText(
-    text: String,
-    isAnimating: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val shimmerBrush = rememberShimmerBrush(isAnimating = isAnimating)
-    
-    Box(modifier = modifier) {
-        // 底层文字
-        Text(
-            text = text,
-            color = MiuixTheme.colorScheme.onSurface,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-        )
-        
-        // 上层扫描光效（仅在动画时显示）
-        if (isAnimating) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .graphicsLayer {
-                        // 启用硬件加速，优化性能
-                        compositingStrategy = CompositingStrategy.Offscreen
-                    }
-                    .drawWithContent {
-                        // 绘制扫描光效
-                        drawRect(brush = shimmerBrush)
-                    }
-            )
-        }
-    }
-}

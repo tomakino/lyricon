@@ -131,13 +131,16 @@ open class LyricLineView(context: Context, attrs: AttributeSet? = null) :
     /** 是否暂停时间驱动的帧推进。 */
     private var animationPaused = false
 
+    /** 隐藏时仍推进时间轴；背景歌词行需要靠 isStarted 触发显示，不能因 GONE 停表。 */
+    var runWhenHidden = false
+
     /** 帧调度：每帧步进当前渲染器，有变化时请求重绘。 */
     private val animator = FrameAnimator(
         onFrame = { deltaNanos ->
             activeRenderer.step(deltaNanos, _model, lineState, measuredWidth)
         },
         requestInvalidate = { postInvalidateOnAnimation() },
-        shouldRun = { isAttachedToWindow && isShown && !animationPaused },
+        shouldRun = { isAttachedToWindow && (isShown || runWhenHidden) && !animationPaused },
         post = { runnable -> post(runnable) },
     )
 
@@ -161,7 +164,7 @@ open class LyricLineView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun syncAnimationState() {
-        if (isAttachedToWindow && isShown && !animationPaused) {
+        if (isAttachedToWindow && (isShown || runWhenHidden) && !animationPaused) {
             animator.startIfNeeded()
         } else {
             animator.stop()
