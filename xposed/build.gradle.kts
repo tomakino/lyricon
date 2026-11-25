@@ -53,8 +53,9 @@ dependencies {
     implementation(project(":lyric:style"))
     implementation(project(":lyric:ai"))
     implementation(project(":lyric:statusbarlyric"))
-    implementation(project(":lyric:bridge:central"))
     implementation(project(":opencc-lite"))
+
+    implementation(libs.lyricon.central)
 
     compileOnly(libs.libxposed.api)
     implementation(libs.libxposed.service)

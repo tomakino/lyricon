@@ -5,11 +5,8 @@ plugins {
 android {
     namespace = "io.github.lyricon.localcentralapp"
     compileSdk {
-        version = release(rootProject.extra.get("compileSdkVersion") as Int) {
-           // minorApiLevel = 1
-        }
+        version = release(rootProject.extra.get("compileSdkVersion") as Int)
     }
-
 
     defaultConfig {
         applicationId = "io.github.lyricon.localcentralapp"
@@ -42,8 +39,10 @@ android {
 
 dependencies {
     implementation(project(":lyric:view"))
-    implementation(project(":lyric:bridge:central"))
-    implementation(project(":lyric:bridge:provider"))
+
+    implementation(libs.lyricon.provider)
+    implementation(libs.lyricon.central)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

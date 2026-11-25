@@ -20,6 +20,7 @@ import io.github.proify.lyricon.common.util.ViewHierarchyParser
 import io.github.proify.lyricon.subscriber.ConnectionListener
 import io.github.proify.lyricon.subscriber.LyriconFactory
 import io.github.proify.lyricon.subscriber.LyriconSubscriber
+import io.github.proify.lyricon.xposed.BuildConfig
 import io.github.proify.lyricon.xposed.ModuleEntry
 import io.github.proify.lyricon.xposed.hook.PackageHooker
 import io.github.proify.lyricon.xposed.logger.YLog
@@ -164,12 +165,13 @@ object SystemUIHooker : PackageHooker() {
         val context = appContext ?: return
 
         val service = ModuleEntry.instance
-        val defaultSp = service.getRemotePreferences("default")
+        val defaultSp = service.getRemotePreferences(BuildConfig.APP_PACKAGE_NAME + "_preferences")
         val coreServiceDisable = defaultSp.getBoolean("core_service_disable", false)
 
         if (!coreServiceDisable) {
             BridgeCentral.initialize(context)
             BridgeCentral.sendBootCompleted()
+            YLog.info(TAG, "使用内置中心服务")
         } else {
             YLog.info(TAG, "已禁用内置中心服务")
         }

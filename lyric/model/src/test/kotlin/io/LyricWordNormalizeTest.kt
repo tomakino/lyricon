@@ -45,7 +45,7 @@ class LyricWordNormalizeTest {
     fun keepsAsciiFragmentsSeparateWhenSpaceExists() {
         val words = listOf(
             LyricWord(begin = 0, duration = 300, end = 300, text = "under"),
-            LyricWord(begin = -1, end = -1, text = " "),
+            LyricWord(begin = 0, end = 0, text = " "),
             LyricWord(begin = 400, duration = 300, end = 700, text = "ground"),
         )
 

@@ -14,6 +14,8 @@ object AppBridge {
     @Keep
     fun isActive(): Boolean = false
 
+    const val PREF_NAME_APP_SETTINGS: String = "app_settings"
+
     object LyricStylePrefs {
         const val LYRIC_STYLE_PREF_NAME_PREIFY: String = "lyricon_style_"
 
@@ -23,8 +25,8 @@ object AppBridge {
         const val PREF_NAME_PACKAGE_MANAGER: String =
             LYRIC_STYLE_PREF_NAME_PREIFY + "package_manager"
 
-        const val KEY_ENABLED_PACKAGES: String = "enables"
-        const val KEY_CONFIGURED_PACKAGES: String = "configured"
+        const val KEY_LYRIC_ENABLED_PACKAGES: String = "enables"
+        const val KEY_LYRIC_CONFIGURED_PACKAGES: String = "configured"
 
         fun getPackageStylePrefName(packageName: String): String {
             val prefix = LYRIC_STYLE_PREF_NAME_PREIFY + "app_"

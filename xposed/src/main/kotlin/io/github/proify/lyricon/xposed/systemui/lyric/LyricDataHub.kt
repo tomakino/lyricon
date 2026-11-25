@@ -117,13 +117,14 @@ object LyricDataHub : ActivePlayerListener {
         runProcessingPipeline(song)
     }
 
-    private var lastDispatchSongId = 0
+    private var lastDispatchSongId: Int? = null
+
     private fun dispatchSong(song: Song?) {
         // normalize() 已返回深拷贝且不修改入参，此处无需再 deepCopy()（否则每次分发会复制两份完整歌词对象图）
         val normalize = song?.normalize()
+        val hashCode = normalize?.hashCode()
 
-        val hashCode = normalize.hashCode()
-        if (hashCode == lastDispatchSongId) return
+        if (hashCode != null && hashCode == lastDispatchSongId) return
         lastDispatchSongId = hashCode
 
         listeners.forEach { it.onSongChanged(normalize) }
@@ -156,6 +157,8 @@ object LyricDataHub : ActivePlayerListener {
     }
 
     override fun onActiveProviderChanged(providerInfo: ProviderInfo?) {
+        // 新播放器会话：允许同一首歌重新分发
+        lastDispatchSongId = null
         this.providerInfo = providerInfo
         listeners.forEach { it.onActiveProviderChanged(providerInfo) }
     }

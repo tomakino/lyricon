@@ -6,14 +6,16 @@
 
 package io.github.proify.lyricon.xposed.systemui.ai.explain
 
+import android.content.Context
 import android.content.Intent
-import android.view.View
 import io.github.proify.lyricon.lyric.ai.explain.AiExplainContract
 import io.github.proify.lyricon.lyric.model.Song
+import io.github.proify.lyricon.lyric.model.extensions.deepCopy
 import io.github.proify.lyricon.xposed.BuildConfig
 import io.github.proify.lyricon.xposed.logger.YLog
 import io.github.proify.lyricon.xposed.systemui.lyric.LyricViewController
 import io.github.proify.lyricon.xposed.systemui.util.MediaTrackMeta
+import kotlinx.serialization.json.Json
 
 /**
  * AI 歌词解释启动器（AI Lyric Explain Launcher）
@@ -35,20 +37,18 @@ object AiExplainLauncher {
 
     private const val TAG = "AiExplainLauncher"
 
+    private val prettyJson = Json {
+        prettyPrint = true
+        prettyPrintIndent = "  "
+        explicitNulls = false
+        encodeDefaults = false
+    }
+
     /**
      * 启动一次"解释歌词"流程。
-     *
-     * @param anchor 弹窗锚点（状态栏歌词视图）
-     * @param button 触发按钮
-     * @param song 当前歌曲；无歌词时直接忽略
      */
-    fun launch(anchor: View, button: View, song: Song?) {
-        val context = button.context
+    fun launch(context: Context, song: Song?) {
         val lyrics = extractContextLyrics(song)
-        if (lyrics.isBlank()) {
-            YLog.info(TAG, "AI explain skipped: no lyric context.")
-            return
-        }
 
         val meta = MediaTrackMeta.resolve(LyricViewController.activePackage)
         val displaySong = mergeSystemMeta(song, meta)
@@ -74,25 +74,22 @@ object AiExplainLauncher {
     // -------------------------------------------------------------------------
 
     /**
-     * 抽取完整歌词作为 AI 解读上下文：不做行数与长度限制。
+     * 抽取完整歌词作为 AI 解读上下文：直接输出 song.lyrics 的格式化 JSON。
      */
     private fun extractContextLyrics(song: Song?): String {
-        val song = song ?: return ""
-        val lyrics = song.lyrics.orEmpty()
-        if (lyrics.isEmpty()) return ""
-
-        return lyrics.map { Pair(it.text.orEmpty(), it.secondary) }
-            .filter { it.first.isNotBlank() }
-            .joinToString("\n") {
-                val sb = StringBuilder("- \"${it.first}")
-                if (!it.second.isNullOrBlank()) {
-                    sb.append("\" (${it.second})")
-                }
-                sb.append("\"")
-                sb.toString()
+        val lyrics = song?.lyrics?.deepCopy()
+            .orEmpty()
+            .map {
+                it.words = null
+                it.secondaryWords = null
+                it.translationWords = null
+                it
             }
-            .also { YLog.info(TAG, "AI explain context (full song, ${it.length} chars): $it") }
-    }                                                                                                           
+
+        if (lyrics.isEmpty()) return "无歌词"
+
+        return prettyJson.encodeToString(lyrics)
+    }
 
     /**
      * 用系统媒体会话元数据覆盖 Song 的标题/歌手（仅用于 AI 请求的元数据，

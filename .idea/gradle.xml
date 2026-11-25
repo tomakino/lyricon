@@ -9,17 +9,12 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/bridge" />
             <option value="$PROJECT_DIR$/common" />
             <option value="$PROJECT_DIR$/lyric" />
             <option value="$PROJECT_DIR$/lyric/ai" />
             <option value="$PROJECT_DIR$/lyric/bridge" />
-            <option value="$PROJECT_DIR$/lyric/bridge/central" />
-            <option value="$PROJECT_DIR$/lyric/bridge/centralapp" />
             <option value="$PROJECT_DIR$/lyric/bridge/localcentralapp" />
-            <option value="$PROJECT_DIR$/lyric/bridge/provider" />
-            <option value="$PROJECT_DIR$/lyric/bridge/subscriber" />
             <option value="$PROJECT_DIR$/lyric/model" />
             <option value="$PROJECT_DIR$/lyric/statusbarlyric" />
             <option value="$PROJECT_DIR$/lyric/style" />
@@ -27,6 +22,7 @@
             <option value="$PROJECT_DIR$/lyric/viewAppTest" />
             <option value="$PROJECT_DIR$/lyricon" />
             <option value="$PROJECT_DIR$/opencc-lite" />
+            <option value="$PROJECT_DIR$/ui" />
             <option value="$PROJECT_DIR$/xposed" />
             <option value="$PROJECT_DIR$/yoyo" />
           </set>

@@ -82,7 +82,7 @@ configure<ApplicationExtension> {
 }
 
 dependencies {
-    implementation(project(":app"))
+    implementation(project(":ui"))
     implementation(project(":xposed"))
 
     testImplementation(libs.junit)

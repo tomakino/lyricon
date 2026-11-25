@@ -299,9 +299,10 @@ open class LyricPlayerView(
         lastSyncedPosition = position
         lastPosition = position
         if (switching) {
-            forEach { view ->
-                if (view is RichLyricLineView) {
-                    if (seekTo) view.seekTo(position) else view.setPosition(position)
+            // 切换中旧行正在 out；seek 到别的行时不要把它拉到新位置（会瞬间滚到尾）。
+            if (!seekTo) {
+                forEach { view ->
+                    if (view is RichLyricLineView) view.setPosition(position)
                 }
             }
             return
@@ -312,6 +313,8 @@ open class LyricPlayerView(
         val matches = tempMatches
 
         syncViews(matches)
+        // syncViews 刚启动了切换：旧行保持 out 状态，新行在 in 阶段用 lastPosition 应用。
+        if (switching && seekTo) return
         if (!switching) syncTitle()
 
         forEach { view ->

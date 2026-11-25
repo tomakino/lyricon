@@ -1,16 +1,16 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest1281305368932559067.xml:2:13-83
-INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest1281305368932559067.xml:2:13-83
+ADDED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7292806168988720516.xml:2:13-83
+INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7292806168988720516.xml:2:13-83
 	package
-		INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest1281305368932559067.xml
+		INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7292806168988720516.xml
 	xmlns:android
-		ADDED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest1281305368932559067.xml:2:23-81
+		ADDED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7292806168988720516.xml:2:23-81
 uses-sdk
-INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest1281305368932559067.xml reason: use-sdk injection requested
-INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest1281305368932559067.xml
-INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest1281305368932559067.xml
+INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7292806168988720516.xml reason: use-sdk injection requested
+INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7292806168988720516.xml
+INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7292806168988720516.xml
 	android:targetSdkVersion
-		INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest1281305368932559067.xml
+		INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7292806168988720516.xml
 	android:minSdkVersion
-		INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest1281305368932559067.xml
+		INJECTED from C:\Users\Lin\AndroidStudioProjects\lyricon\lyric\ai\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7292806168988720516.xml

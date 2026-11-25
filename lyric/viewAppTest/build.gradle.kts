@@ -52,9 +52,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
 
     implementation(project(":lyric:view"))
-    implementation(project(":lyric:bridge:provider"))
 
-    implementation(project(":lyric:model"))
+    implementation(libs.lyricon.provider)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

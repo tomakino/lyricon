@@ -9,7 +9,6 @@ package io.github.proify.lyricon.xposed.systemui.lyric.control
 import android.annotation.SuppressLint
 import android.media.MediaMetadata
 import android.media.session.MediaController
-import android.opengl.GLSurfaceView
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
@@ -105,7 +104,7 @@ object LyricControlPopup : ActivePlayerListener, NotificationCoverHelper.OnCover
 
         override fun onAiExplain(button: View) {
             val anchor = anchorView ?: return
-            AiExplainLauncher.launch(anchor, button, LyricViewController.currentSong)
+            AiExplainLauncher.launch(button.context, LyricViewController.currentSong?.deepCopy())
             dismiss()
         }
 

@@ -38,7 +38,7 @@ dependencies {
     implementation(project(":lyric:model"))
     implementation(project(":lyric:style"))
 
-    implementation(project(":lyric:bridge:subscriber"))
+    implementation(libs.lyricon.provider)
 
     implementation(libs.androidx.core.ktx)
     testImplementation(libs.junit)

@@ -115,7 +115,7 @@ object LyricPrefs {
         return runCatching {
             packageStyleManagerPrefs
                 .getStringSet(
-                    AppBridge.LyricStylePrefs.KEY_ENABLED_PACKAGES,
+                    AppBridge.LyricStylePrefs.KEY_LYRIC_ENABLED_PACKAGES,
                     emptySet()
                 )
                 ?.contains(packageName) ?: false

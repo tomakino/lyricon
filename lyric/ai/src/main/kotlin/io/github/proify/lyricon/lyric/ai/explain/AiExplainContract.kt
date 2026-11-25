@@ -9,7 +9,6 @@ package io.github.proify.lyricon.lyric.ai.explain
 /**
  * AI 音乐解读的跨进程契约：Intent extras 与目标 Activity 的单一来源。
  *
- * SystemUI 进程的 [io.github.proify.lyricon.xposed.systemui.ai.explain.AiExplainLauncher]
  * 与 App 进程的 AiExplainActivity 共同引用，避免两边各写一份字面量导致静默失配。
  */
 object AiExplainContract {

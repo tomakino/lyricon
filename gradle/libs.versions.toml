@@ -49,7 +49,17 @@ junit4 = "4.13.2"
 xposed-api = "102.0.0"
 xposed-service = "102.0.0"
 
+lyricon-subscriber = "0.1.85"
+lyricon-provider = "0.1.85"
+lyricon-model = "0.1.85"
+lyricon-central = "0.1.85"
+
 [libraries]
+lyricon-provider = { module = "io.github.proify.lyricon:provider", version.ref = "lyricon-subscriber" }
+lyricon-subscriber = { module = "io.github.proify.lyricon:subscriber", version.ref = "lyricon-provider" }
+lyricon-lyric-model = { module = "io.github.proify.lyricon.lyric:model", version.ref = "lyricon-model" }
+lyricon-central = { module = "io.github.proify.lyricon:central", version.ref = "lyricon-central" }
+
 # ===== AndroidX Base =====
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }

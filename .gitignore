@@ -26,3 +26,5 @@ docs/.vitepress/dist/
 
 package.json
 package-lock.json
+
+.agents

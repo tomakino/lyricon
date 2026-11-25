@@ -25,17 +25,13 @@ dependencyResolutionManagement {
 
 include(
     ":lyricon",
-    ":app",
+    ":ui",
     ":bridge",
     ":xposed",
     ":common",
-    "yoyo"
+    ":yoyo"
 )
 
-include(":lyric:bridge:central")
-include(":lyric:bridge:provider")
-include(":lyric:bridge:subscriber")
-include(":lyric:bridge:centralapp")
 include(":lyric:bridge:localcentralapp")
 
 include(":lyric:model")
